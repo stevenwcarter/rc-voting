@@ -12,8 +12,6 @@ extern crate rocket_contrib;
 extern crate itertools;
 extern crate rcir;
 
-mod schema;
-
 use diesel::SqliteConnection;
 use rocket::http::{Cookie, Cookies};
 use rocket::outcome::IntoOutcome;
@@ -21,7 +19,7 @@ use rocket::request::{self, Form, FromRequest, Request};
 use rocket::Rocket;
 use rocket_contrib::{json::Json, templates::Template};
 
-use schema::{Ballot, Item, NewUser, Vote};
+use aem_voting::schema::{Ballot, Item, NewUser, Vote};
 
 #[database("sqlite_database")]
 pub struct DbConn(SqliteConnection);
