@@ -27,7 +27,7 @@ pub fn hydrate() {
 /// Return an environment variable typed generically
 ///
 /// ```
-/// use rc_voting::get_env;
+/// use rc_voting_leptos::get_env;
 /// assert!(get_env("PATH", "test").len() > 4);
 /// ````
 pub fn get_env(search_key: &str, default: &str) -> String {
@@ -45,7 +45,7 @@ pub fn get_env(search_key: &str, default: &str) -> String {
 /// Return an environment variable typed generically
 ///
 /// ```
-/// use rc_voting::get_env_typed;
+/// use rc_voting_leptos::get_env_typed;
 /// assert!(get_env_typed::<u16>("SHLVL", 9) > 0);
 /// ````
 pub fn get_env_typed<T>(search_key: &str, default: T) -> T
