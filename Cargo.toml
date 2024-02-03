@@ -127,6 +127,8 @@ reload-port = 3233
 end2end-cmd = "npx playwright test"
 end2end-dir = "end2end"
 
+tailwind-input-file = "style/tailwind.css"
+tailwind-config-file = "tailwind.config.js"
 #  The browserlist query used for optimizing the CSS.
 browserquery = "defaults"
 
