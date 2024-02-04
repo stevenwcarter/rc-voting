@@ -17,7 +17,7 @@ pub mod ssr {
     use crate::schema::items::dsl::{done as item_done, items as all_items};
     use crate::schema::users::dsl::{username as users_uname, users as all_users};
     use crate::schema::votes::dsl::{item_id, ordinal, user_id, votes as all_votes};
-    use diesel::prelude::*;
+    use diesel::{insert_into, prelude::*};
     use itertools::Itertools;
 
     impl User {
@@ -52,6 +52,35 @@ pub mod ssr {
     }
 
     impl Item {
+        pub fn add_new(context: &GraphQLContext, title: &str, body: &str) -> Result<Item> {
+            let mut conn = context.pool.get().expect("Could not get connection");
+
+            let item = NewItem {
+                title: title.to_string(),
+                body: body.to_string(),
+            };
+
+            let result_id = insert_into(items::table)
+                .values(&item)
+                .execute(&mut conn)
+                .context("Could not insert")?;
+
+            let item = items::table
+                .filter(items::title.eq(title))
+                .filter(items::body.eq(body))
+                .first::<Item>(&mut conn)
+                .context("Could not retrieve created value")?;
+
+            Ok(item)
+        }
+        pub fn list(context: &GraphQLContext) -> Vec<Item> {
+            let mut conn = context.pool.get().expect("Could not get connection");
+
+            all_items
+                .filter(crate::schema::items::done.eq(false))
+                .load::<Item>(&mut conn)
+                .unwrap()
+        }
         pub fn for_user(uid: i32, context: &GraphQLContext) -> Vec<(Item, Option<i32>)> {
             let mut conn = context.pool.get().expect("Could not get connection");
 
@@ -198,4 +227,11 @@ pub struct Ballot {
 #[cfg_attr(feature = "ssr", diesel(table_name = crate::schema::users))]
 pub struct NewUser {
     pub username: String,
+}
+
+#[cfg_attr(feature = "ssr", derive(Insertable))]
+#[cfg_attr(feature = "ssr", diesel(table_name = crate::schema::items))]
+pub struct NewItem {
+    pub title: String,
+    pub body: String,
 }
