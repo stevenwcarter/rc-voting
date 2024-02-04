@@ -1,53 +1,52 @@
-
-use crate::{error_template::{AppError, ErrorTemplate}, models::Item};
+use crate::{
+    error_template::ErrorTemplate,
+    models::Item,
+};
 use leptos::*;
-use leptos_meta::*;
 use leptos_router::*;
 
 #[component]
-pub fn App() -> impl IntoView {
-    // Provides context that manages stylesheets, titles, meta tags, etc.
-    provide_meta_context();
-
-    view! {
-        <Stylesheet id="leptos" href="/pkg/rc-voting-leptos.css"/>
-
-        // sets the document title
-        <Title text="Welcome to Leptos"/>
-
-        // content for this welcome page
-        <Router fallback=|| {
-            let mut outside_errors = Errors::default();
-            outside_errors.insert_with_default_key(AppError::NotFound);
-            view! { <ErrorTemplate outside_errors/> }.into_view()
-        }>
-            <main class="my-0 mx-auto max-w-3xl text-center">
-                <Routes>
-                    <Route path="" view=HomePage/>
-                </Routes>
-            </main>
-        </Router>
-    }
-}
-
-#[component]
 pub fn ItemList() -> impl IntoView {
-    let add_item = create_server_multi_action::<AddItem>();
-    // let submissions = add_todo.submissions();
-    // let item_list = create_resource(|| (), |_| async move { get_items().await });
+    let add_item = create_server_action::<AddItem>();
+
+    let items = create_resource(move || add_item.version().get(), move |_| get_items());
 
     view! {
-        // {move || match item_list.get() {
-        //     None => view! { <p>"Loading items"</p> }.into_view(),
-        //     Some(data) => {
-        //         view! {
-        //             <For each=data key=|item| item.id.clone() let:child>
-        //                 <Item item=child/>
-        //             </For>
-        //         }
-        //             .into_view()
-        //     }
-        // }}
+        <ItemForm add_item=add_item/>
+        <Transition fallback=move || view! { <p>"Loading..."</p> }>
+            <ErrorBoundary fallback=|errors| {
+                view! { <ErrorTemplate errors=errors/> }
+            }>
+                {move || {
+                    let current_items = {
+                        move || {
+                            items
+                                .get()
+                                .map(move |items| match items {
+                                    Err(e) => {
+                                        view! { <pre>"Server error: " {e.to_string()}</pre> }
+                                            .into_view()
+                                    }
+                                    Ok(items) => {
+                                        if items.is_empty() {
+                                            view! { <p>"No votable items found"</p> }.into_view()
+                                        } else {
+                                            items
+                                                .into_iter()
+                                                .map(move |item| {
+                                                    view! { <li>{item.title} <br/> {item.body}</li> }
+                                                })
+                                                .collect_view()
+                                        }
+                                    }
+                                })
+                        }
+                    };
+                    view! { <ul>{current_items}</ul> }
+                }}
+
+            </ErrorBoundary>
+        </Transition>
     }
 }
 
@@ -65,73 +64,35 @@ pub fn Item(item: Item) -> impl IntoView {
 
 #[server(GetItems)]
 pub async fn get_items() -> Result<Vec<Item>, ServerFnError> {
-    use leptos_axum::extract;
-    use std::sync::Arc;
+    use crate::context::GraphQLContext;
+    use crate::models::Item;
     use axum::Extension;
-    use crate::context::GraphQLContext;
-    use crate::models::Item;
-
-    let Extension(context): Extension<Arc<GraphQLContext>> = extract().await?;
-
-    Item::list(&context)
-}
-
-#[server(AxumExtract, "/test-api")]
-pub async fn axum_extract() -> Result<String, ServerFnError> {
     use leptos_axum::extract;
     use std::sync::Arc;
-use axum::Extension;
-    use crate::context::GraphQLContext;
-    use diesel::prelude::*;
-    use crate::models::Item;
-    use crate::schema::items;
 
     let Extension(context): Extension<Arc<GraphQLContext>> = extract().await?;
-    let mut conn = context.pool.get().expect("Could not get connection");
 
-    let item = items::table.first::<Item>(&mut conn).expect("Could not query database");
-
-    log::info!("Vote is {:#?}", item);
-
-    Ok("test".to_string())
-}
-
-/// Renders the home page of your application.
-#[component]
-fn HomePage() -> impl IntoView {
-    // Creates a reactive value to update the button
-    let (count, set_count) = create_signal(0);
-    let on_click = move |_| set_count.update(|count| *count += 1);
-
-    view! {
-        <h1 class="p-6 text-6xl text-blue-700">"Welcome to Leptos!"</h1>
-        <button
-            class="bg-sky-600 hover:bg-sky-700 px-5 py-3 text-white rounded-lg"
-            on:click=on_click
-        >
-            "Click Me: "
-            {count}
-        </button>
-        <ItemForm/>
-    }
+    Ok(Item::list(&context))
 }
 
 #[server(AddItem, "/api/v2")]
 pub async fn add_todo(title: String, body: String) -> Result<Item, ServerFnError> {
-    use leptos_axum::extract;
-    use std::sync::Arc;
-use axum::Extension;
     use crate::context::GraphQLContext;
     use crate::models::Item;
+    use axum::Extension;
+    use leptos_axum::extract;
+    use std::sync::Arc;
 
     let Extension(context): Extension<Arc<GraphQLContext>> = extract().await?;
 
-    Item::add_new(&context, &title, &body).map_err(|_err| ServerFnError::ServerError("Could not extract method and query...".to_string()))
+    Item::add_new(&context, &title, &body).map_err(|_err| {
+        ServerFnError::ServerError("Could not extract method and query...".to_string())
+    })
 }
 
 #[component]
-fn ItemForm() -> impl IntoView {
-    let add_item = create_server_action::<AddItem>();
+fn ItemForm(add_item: Action<AddItem, Result<Item, ServerFnError>>) -> impl IntoView {
+    // let add_item = create_server_action::<AddItem>();
     let (title, set_title) = create_signal("".to_string());
     let (body, set_body) = create_signal("".to_string());
 

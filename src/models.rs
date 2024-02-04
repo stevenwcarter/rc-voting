@@ -193,7 +193,7 @@ pub mod ssr {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(Identifiable, Queryable, Insertable))]
 pub struct Item {
     pub id: i32,
