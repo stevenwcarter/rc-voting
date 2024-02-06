@@ -1,18 +1,21 @@
 use crate::{
-    error_template::ErrorTemplate,
-    models::Item,
+    error_template::ErrorTemplate, models::Item
 };
 use leptos::*;
 use leptos_router::*;
 
 #[component]
-pub fn ItemList() -> impl IntoView {
+pub fn ItemList(election_uuid: String) -> impl IntoView {
     let add_item = create_server_action::<AddItem>();
 
-    let items = create_resource(move || add_item.version().get(), move |_| get_items());
+    let resource_election_uuid = election_uuid.clone();
+    let items = create_resource(move || add_item.version().get(), move |_| {
+        // set_election_uuid_signal(election_uuid());
+        get_items(resource_election_uuid.clone())
+    });
 
     view! {
-        <ItemForm add_item=add_item/>
+        <ItemForm add_item=add_item election_uuid=election_uuid/>
         <Transition fallback=move || view! { <p>"Loading..."</p> }>
             <ErrorBoundary fallback=|errors| {
                 view! { <ErrorTemplate errors=errors/> }
@@ -53,46 +56,18 @@ pub fn ItemList() -> impl IntoView {
 #[component]
 pub fn Item(item: Item) -> impl IntoView {
     view! {
-        <div class="grid items-center grid-cols-10 text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white">
-            <div class="align-middle">{item.uuid}</div>
-            <div class="col-span-4">{item.title}</div>
-            <div class="col-span-4">{item.body}</div>
-            <div class="align-middle">{item.done}</div>
+        <div class="grid items-center grid-cols-8 text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white">
+            // <div class="align-middle">{item.uuid}</div>
+            <div class="col-span-2">{item.title}</div>
+            <div class="col-span-6">{item.body}</div>
+        // <div class="align-middle">{item.done}</div>
         </div>
     }
 }
 
-#[server(GetItems)]
-pub async fn get_items() -> Result<Vec<Item>, ServerFnError> {
-    use crate::context::GraphQLContext;
-    use crate::models::Item;
-    use axum::Extension;
-    use leptos_axum::extract;
-    use std::sync::Arc;
-
-    let Extension(context): Extension<Arc<GraphQLContext>> = extract().await?;
-
-    Ok(Item::list(&context))
-}
-
-#[server(AddItem)]
-pub async fn add_item(election_uuid: String, title: String, body: String) -> Result<Item, ServerFnError> {
-    use crate::context::GraphQLContext;
-    use crate::models::Item;
-    use axum::Extension;
-    use leptos_axum::extract;
-    use std::sync::Arc;
-
-    logging::log!("Adding...");
-    let Extension(context): Extension<Arc<GraphQLContext>> = extract().await?;
-
-    Item::add_new(&context, &election_uuid, &title, &body).map_err(|_err| {
-        ServerFnError::ServerError("Could not extract method and query...".to_string())
-    })
-}
 
 #[component]
-fn ItemForm(add_item: Action<AddItem, Result<Item, ServerFnError>>) -> impl IntoView {
+fn ItemForm(add_item: Action<AddItem, Result<Item, ServerFnError>>, election_uuid: String) -> impl IntoView {
     // let add_item = create_server_action::<AddItem>();
     // TODO - grab from query parameters
     let (title, set_title) = create_signal("".to_string());
@@ -117,6 +92,7 @@ fn ItemForm(add_item: Action<AddItem, Result<Item, ServerFnError>>) -> impl Into
         <ActionForm action=add_item>
             <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
                 <div class="col-span-full">
+                    <input type="hidden" name="election_uuid" value=election_uuid/>
                     <label for="title">"Add a short summary"</label>
                     <div class="mt-2">
                         <input
@@ -155,4 +131,32 @@ fn ItemForm(add_item: Action<AddItem, Result<Item, ServerFnError>>) -> impl Into
             </div>
         </ActionForm>
     }
+}
+
+// Server Functions
+
+#[server(GetItems)]
+pub async fn get_items(election_uuid: String) -> Result<Vec<Item>, ServerFnError> {
+    use crate::models::Item;
+    use leptos_axum::extract;
+    use crate::api::SessionContext;
+
+    let SessionContext(context): SessionContext = extract().await?;
+
+    Ok(Item::list(&context, &election_uuid))
+}
+
+#[server(AddItem)]
+pub async fn add_item(election_uuid: String, title: String, body: String) -> Result<Item, ServerFnError> {
+    use crate::models::Item;
+    use leptos_axum::extract;
+    use crate::api::SessionContext;
+    use log::*;
+
+    warn!("Adding... {election_uuid} {title} {body}");
+    let SessionContext(context): SessionContext = extract().await?;
+
+    Item::add_new(&context, &election_uuid, &title, &body).map_err(|err| {
+        ServerFnError::ServerError(format!("Could not extract method and query... {:?}", err))
+    })
 }

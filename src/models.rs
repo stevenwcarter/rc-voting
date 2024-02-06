@@ -94,6 +94,26 @@ pub mod ssr {
             Self::get(context, &election.uuid)
         }
 
+        pub fn list(context: &GraphQLContext) -> Result<Vec<Election>> {
+            if context.session.is_none() {
+                bail!("User is not authenticated");
+            }
+
+            let user = context
+                .session
+                .as_ref()
+                .unwrap()
+                .get_user(context)
+                .context("Could not get user session")?;
+
+            let mut conn = context.pool.get().context("Could not get connection")?;
+
+            elections::table
+                .filter(elections::owner_uuid.eq(user.uuid))
+                .load::<Election>(&mut conn)
+                .context("Could not retrieve election")
+        }
+
         pub fn get(context: &GraphQLContext, uuid: &str) -> Result<Election> {
             if context.session.is_none() {
                 bail!("User is not authenticated");
@@ -149,6 +169,7 @@ pub mod ssr {
             let mut conn = context.pool.get().expect("Could not get connection");
 
             let item = NewItem {
+                uuid: Uuid::new_v4().to_string(),
                 election_uuid: election_uuid.to_string(),
                 title: title.to_string(),
                 body: body.to_string(),
@@ -168,23 +189,29 @@ pub mod ssr {
 
             Ok(item)
         }
-        pub fn list(context: &GraphQLContext) -> Vec<Item> {
+        pub fn list(context: &GraphQLContext, election_uuid: &str) -> Vec<Item> {
             let mut conn = context.pool.get().expect("Could not get connection");
 
             all_items
                 .filter(crate::schema::items::done.eq(false))
+                .filter(items::election_uuid.eq(election_uuid))
                 .load::<Item>(&mut conn)
                 .unwrap()
         }
-        pub fn for_user(uuid: String, context: &GraphQLContext) -> Vec<(Item, Option<i32>)> {
+        pub fn for_user(
+            context: &GraphQLContext,
+            user_id: &str,
+            election_uuid: &str,
+        ) -> Vec<(Item, Option<i32>)> {
             let mut conn = context.pool.get().expect("Could not get connection");
 
             all_items
                 .left_join(
                     crate::schema::votes::table
-                        .on(user_uuid.eq(&uuid).and(item_uuid.eq(items::uuid))),
+                        .on(user_uuid.eq(&user_id).and(item_uuid.eq(items::uuid))),
                 )
                 .filter(crate::schema::items::done.eq(false))
+                .filter(items::election_uuid.eq(election_uuid))
                 .order((user_uuid.desc(), ordinal.asc()))
                 .select((crate::schema::items::all_columns, ordinal.nullable()))
                 .load::<(Item, Option<i32>)>(&mut conn)
@@ -358,6 +385,7 @@ pub struct NewUser {
 #[cfg_attr(feature = "ssr", derive(Insertable))]
 #[cfg_attr(feature = "ssr", diesel(table_name = crate::schema::items))]
 pub struct NewItem {
+    pub uuid: String,
     pub election_uuid: String,
     pub title: String,
     pub body: String,

@@ -5,6 +5,7 @@ use axum::response::{IntoResponse, Response};
 use axum::{Extension, RequestPartsExt};
 use axum::{async_trait, Json};
 use axum::{http::StatusCode, routing::get, Router};
+use tracing::info;
 use crate::{context::GraphQLContext, models::Session, session::SessionSvc};
 use axum_extra::extract::CookieJar;
 use serde::Serialize;
@@ -64,11 +65,14 @@ where
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let cookie_jar = parts.extract::<CookieJar>().await.unwrap();
+        info!("Got cookie jar");
 
-        let session_id = cookie_jar.get("X-Login");
+        let session_id = cookie_jar.get("X-Login-Session-ID");
+        info!("Got session_id {:#?}", session_id);
 
         if let Some(session_id) = session_id {
             let session_id = session_id.value();
+            info!("Got session_id {session_id}");
             trace!("Found session_id: {session_id}");
             let Extension(context) = parts
                 .extract::<Extension<Arc<GraphQLContext>>>()
@@ -78,7 +82,10 @@ where
                     err.into_response()
                 })?;
 
+            info!("Got extension");
+
             let session = verify_auth_cookie(&context, session_id);
+            info!("verified session {:#?}", session);
             if let Some(session) = session {
                 let context = context.attach_session(&session);
                 Ok(Self(context.clone()))
