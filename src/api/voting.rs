@@ -1,12 +1,12 @@
 use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::{http::StatusCode, response::Response, routing::post, Extension, Json, Router};
+use axum::{response::Response, routing::post, Extension, Json, Router};
 use std::sync::Arc;
 
 use super::{middleware, SessionContext};
 use crate::{
     context::GraphQLContext,
-    models::{Ballot, User, Vote},
+    models::{Ballot, Vote},
 };
 
 #[cfg(feature="ssr")]
@@ -21,18 +21,13 @@ pub fn voting_routes(context: Arc<GraphQLContext>) -> Router {
 
 #[cfg(feature="ssr")]
 async fn handle_vote(
-    Extension(context): Extension<Arc<GraphQLContext>>,
-    SessionContext(login): SessionContext,
+    SessionContext(context): SessionContext,
     Json(ballot): Json<Ballot>,
 ) -> Response {
-    log::info!("{login} voted");
-    let user = User::get(&context, &login);
-    if user.is_err() {
-        return (StatusCode::UNAUTHORIZED).into_response();
-    }
+    let user = context.session.as_ref().unwrap().get_user(&context).unwrap();
+    log::info!("{} voted", user.email);
 
-    let user = user.unwrap();
-    Vote::save_ballot(user.id, &ballot, &context);
+    Vote::save_ballot(&context, &ballot);
     Json(ballot).into_response()
 }
 

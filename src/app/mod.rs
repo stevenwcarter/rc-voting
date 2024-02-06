@@ -1,10 +1,19 @@
-use self::items::ItemList;
-use crate::error_template::{AppError, ErrorTemplate};
+use crate::{
+    app::{
+        elections::{ElectionItem, Elections, NoElectionItem},
+        login::{LoginPage, SignupPage},
+    },
+    error_template::{AppError, ErrorTemplate},
+};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 
+use self::items::ItemList;
+
+pub mod elections;
 pub mod items;
+pub mod login;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -25,7 +34,12 @@ pub fn App() -> impl IntoView {
         }>
             <main class="my-0 mx-auto max-w-3xl text-center">
                 <Routes>
-                    <Route path="" view=HomePage/>
+                    <Route path="" view=LoginPage/>
+                    <Route path="/sign-up" view=SignupPage/>
+                    <Route path="/elections" view=Elections>
+                        <Route path=":election_uuid" view=ElectionItem/>
+                        <Route path="" view=NoElectionItem/>
+                    </Route>
                 </Routes>
             </main>
         </Router>

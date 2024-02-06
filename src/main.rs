@@ -52,7 +52,7 @@ use rc_voting_leptos::context::GraphQLContext;
 
     let pool = get_pool();
 
-    let context = Arc::new(GraphQLContext { pool: pool.clone() });
+    let context = Arc::new(GraphQLContext { pool: pool.clone(), session: None });
 
     // let routes = create_routes(&context);
 

@@ -1,16 +1,17 @@
 use axum::extract::FromRequestParts;
+use log::*;
 use axum::http::request::Parts;
 use axum::response::{IntoResponse, Response};
-use axum::RequestPartsExt;
+use axum::{Extension, RequestPartsExt};
 use axum::{async_trait, Json};
 use axum::{http::StatusCode, routing::get, Router};
+use crate::{context::GraphQLContext, models::Session, session::SessionSvc};
 use axum_extra::extract::CookieJar;
 use serde::Serialize;
 use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::ServiceBuilderExt;
 
-use crate::context::GraphQLContext;
 
 #[cfg(feature="ssr")]
 pub mod login;
@@ -51,7 +52,7 @@ pub fn err_wrapper<T: Serialize>(result: anyhow::Result<T>) -> impl IntoResponse
     )
 }
 
-pub struct SessionContext(pub String);
+pub struct SessionContext(pub GraphQLContext);
 
 #[async_trait]
 #[cfg(feature="ssr")]
@@ -67,30 +68,39 @@ where
         let session_id = cookie_jar.get("X-Login");
 
         if let Some(session_id) = session_id {
-            Ok(SessionContext(session_id.to_string()))
-            // let session_id = session_id.value();
-            // trace!("Found session_id: {session_id}");
-            // let Extension(context) = parts
-            //     .extract::<Extension<Arc<GraphQLContext>>>()
-            //     .await
-            //     .map_err(|err| {
-            //         error!("Error retrieving extension");
-            //         err.into_response()
-            //     })?;
+            let session_id = session_id.value();
+            trace!("Found session_id: {session_id}");
+            let Extension(context) = parts
+                .extract::<Extension<Arc<GraphQLContext>>>()
+                .await
+                .map_err(|err| {
+                    error!("Error retrieving extension");
+                    err.into_response()
+                })?;
 
-            // let session = verify_auth_cookie(&context, session_id);
-            // if let Some(session) = session {
-            //     let context = context.attach_session(&session);
-            //     Ok(Self(context.clone()))
-            // } else {
-            //     Err((
-            //         StatusCode::UNAUTHORIZED,
-            //         "No session found for provided session id",
-            //     )
-            //         .into_response())
-            // }
+            let session = verify_auth_cookie(&context, session_id);
+            if let Some(session) = session {
+                let context = context.attach_session(&session);
+                Ok(Self(context.clone()))
+            } else {
+                Err((
+                    StatusCode::UNAUTHORIZED,
+                    "No session found for provided session id",
+                )
+                    .into_response())
+            }
         } else {
             Err((StatusCode::UNAUTHORIZED, "No session id found in request").into_response())
         }
+    }
+}
+
+pub fn verify_auth_cookie(context: &GraphQLContext, session_id: &str) -> Option<Session> {
+    let session = SessionSvc::get_session(context, session_id);
+
+    if let Ok(session) = session {
+        Some(session)
+    } else {
+        None
     }
 }

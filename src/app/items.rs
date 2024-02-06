@@ -34,7 +34,7 @@ pub fn ItemList() -> impl IntoView {
                                             items
                                                 .into_iter()
                                                 .map(move |item| {
-                                                    view! { <li>{item.title} <br/> {item.body}</li> }
+                                                    view! { <Item item=item/> }
                                                 })
                                                 .collect_view()
                                         }
@@ -42,7 +42,7 @@ pub fn ItemList() -> impl IntoView {
                                 })
                         }
                     };
-                    view! { <ul>{current_items}</ul> }
+                    { current_items }
                 }}
 
             </ErrorBoundary>
@@ -53,11 +53,11 @@ pub fn ItemList() -> impl IntoView {
 #[component]
 pub fn Item(item: Item) -> impl IntoView {
     view! {
-        <div>
-            <div>{item.id}</div>
-            <div>{item.title}</div>
-            <div>{item.body}</div>
-            <div>{item.done}</div>
+        <div class="grid items-center grid-cols-10 text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white">
+            <div class="align-middle">{item.uuid}</div>
+            <div class="col-span-4">{item.title}</div>
+            <div class="col-span-4">{item.body}</div>
+            <div class="align-middle">{item.done}</div>
         </div>
     }
 }
@@ -75,17 +75,18 @@ pub async fn get_items() -> Result<Vec<Item>, ServerFnError> {
     Ok(Item::list(&context))
 }
 
-#[server(AddItem, "/api/v2")]
-pub async fn add_todo(title: String, body: String) -> Result<Item, ServerFnError> {
+#[server(AddItem)]
+pub async fn add_item(election_uuid: String, title: String, body: String) -> Result<Item, ServerFnError> {
     use crate::context::GraphQLContext;
     use crate::models::Item;
     use axum::Extension;
     use leptos_axum::extract;
     use std::sync::Arc;
 
+    logging::log!("Adding...");
     let Extension(context): Extension<Arc<GraphQLContext>> = extract().await?;
 
-    Item::add_new(&context, &title, &body).map_err(|_err| {
+    Item::add_new(&context, &election_uuid, &title, &body).map_err(|_err| {
         ServerFnError::ServerError("Could not extract method and query...".to_string())
     })
 }
@@ -93,6 +94,7 @@ pub async fn add_todo(title: String, body: String) -> Result<Item, ServerFnError
 #[component]
 fn ItemForm(add_item: Action<AddItem, Result<Item, ServerFnError>>) -> impl IntoView {
     // let add_item = create_server_action::<AddItem>();
+    // TODO - grab from query parameters
     let (title, set_title) = create_signal("".to_string());
     let (body, set_body) = create_signal("".to_string());
 

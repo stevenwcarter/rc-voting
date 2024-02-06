@@ -15,6 +15,10 @@ pub mod graphql;
 pub mod models;
 #[cfg(feature = "ssr")]
 pub mod schema;
+#[cfg(feature = "ssr")]
+pub mod session;
+#[cfg(feature = "ssr")]
+pub mod user_data;
 
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]

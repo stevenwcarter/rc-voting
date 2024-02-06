@@ -12,27 +12,115 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "ssr")]
 pub mod ssr {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
     use super::*;
     use crate::context::GraphQLContext;
     use crate::schema::items::dsl::{done as item_done, items as all_items};
-    use crate::schema::users::dsl::{username as users_uname, users as all_users};
-    use crate::schema::votes::dsl::{item_id, ordinal, user_id, votes as all_votes};
+    use crate::schema::users::dsl::{email as users_uname, users as all_users};
+    use crate::schema::votes::dsl::{item_uuid, ordinal, user_uuid, votes as all_votes};
+    use anyhow::{bail, Context, Result};
     use diesel::{insert_into, prelude::*};
     use itertools::Itertools;
+    use uuid::Uuid;
 
-    impl User {
-        pub fn get(context: &GraphQLContext, username: &str) -> Result<Self> {
+    impl Session {
+        pub fn new(context: &GraphQLContext, user: &User) -> Self {
+            let mut conn = context.pool.get().expect("Could not get connection");
+
+            let start = SystemTime::now();
+            let created = start
+                .duration_since(UNIX_EPOCH)
+                .expect("Time went backwards");
+
+            let created = created.as_millis();
+            let expires = created + (2 * 7 * 24 * 60 * 60 * 1000);
+
+            let created = created as i64;
+            let expires = expires as i64;
+
+            let session_uuid = Uuid::new_v4().to_string();
+
+            let session = Session {
+                uuid: session_uuid,
+                user_uuid: user.uuid.clone(),
+                data: None,
+                created,
+                expires,
+            };
+
+            diesel::insert_or_ignore_into(sessions::table)
+                .values(&session)
+                .execute(&mut conn)
+                .expect("Could not create session");
+
+            session
+        }
+
+        pub fn get_user(&self, context: &GraphQLContext) -> Result<User> {
             let mut conn = context.pool.get().context("Could not get connection")?;
 
             users::table
-                .filter(users::username.eq(username))
+                .filter(users::uuid.eq(&self.user_uuid))
+                .first::<User>(&mut conn)
+                .context("Could not retrieve user for session")
+        }
+    }
+
+    impl Election {
+        pub fn new(context: &GraphQLContext, name: &str) -> Result<Election> {
+            let mut conn = context.pool.get().context("Could not get connection")?;
+
+            let session = context.session.clone();
+            if session.is_none() {
+                bail!("Not authenticated");
+            }
+            let user = session
+                .unwrap()
+                .get_user(context)
+                .context("Could not get user from session")?;
+
+            let election = Election {
+                uuid: Uuid::new_v4().to_string(),
+                owner_uuid: user.uuid.clone(),
+                name: name.to_string(),
+            };
+
+            diesel::insert_into(elections::table)
+                .values(&election)
+                .execute(&mut conn)
+                .context("Could not insert election")?;
+
+            Self::get(context, &election.uuid)
+        }
+
+        pub fn get(context: &GraphQLContext, uuid: &str) -> Result<Election> {
+            if context.session.is_none() {
+                bail!("User is not authenticated");
+            }
+
+            let mut conn = context.pool.get().context("Could not get connection")?;
+
+            elections::table
+                .filter(elections::uuid.eq(uuid))
+                .first::<Election>(&mut conn)
+                .context("Could not retrieve election")
+        }
+    }
+
+    impl User {
+        pub fn get(context: &GraphQLContext, email: &str) -> Result<Self> {
+            let mut conn = context.pool.get().context("Could not get connection")?;
+
+            users::table
+                .filter(users::email.eq(email))
                 .first(&mut conn)
                 .context("Could not query for user")
         }
-        pub fn login(context: &GraphQLContext, username: &str) -> Result<Self> {
+        pub fn login(context: &GraphQLContext, email: &str) -> Result<Self> {
             let mut conn = context.pool.get().expect("Could not get connection");
 
-            User::get(context, username).context("Could not retrieve user")
+            User::get(context, email).context("Could not retrieve user")
         }
     }
     impl NewUser {
@@ -45,17 +133,23 @@ pub mod ssr {
                 .execute(&mut conn);
 
             users::table
-                .filter(users::username.eq(&self.username))
+                .filter(users::email.eq(&self.email))
                 .get_result::<User>(&mut conn)
                 .unwrap()
         }
     }
 
     impl Item {
-        pub fn add_new(context: &GraphQLContext, title: &str, body: &str) -> Result<Item> {
+        pub fn add_new(
+            context: &GraphQLContext,
+            election_uuid: &str,
+            title: &str,
+            body: &str,
+        ) -> Result<Item> {
             let mut conn = context.pool.get().expect("Could not get connection");
 
             let item = NewItem {
+                election_uuid: election_uuid.to_string(),
                 title: title.to_string(),
                 body: body.to_string(),
             };
@@ -66,6 +160,7 @@ pub mod ssr {
                 .context("Could not insert")?;
 
             let item = items::table
+                .filter(items::election_uuid.eq(election_uuid))
                 .filter(items::title.eq(title))
                 .filter(items::body.eq(body))
                 .first::<Item>(&mut conn)
@@ -81,15 +176,16 @@ pub mod ssr {
                 .load::<Item>(&mut conn)
                 .unwrap()
         }
-        pub fn for_user(uid: i32, context: &GraphQLContext) -> Vec<(Item, Option<i32>)> {
+        pub fn for_user(uuid: String, context: &GraphQLContext) -> Vec<(Item, Option<i32>)> {
             let mut conn = context.pool.get().expect("Could not get connection");
 
             all_items
                 .left_join(
-                    crate::schema::votes::table.on(user_id.eq(&uid).and(item_id.eq(items::id))),
+                    crate::schema::votes::table
+                        .on(user_uuid.eq(&uuid).and(item_uuid.eq(items::uuid))),
                 )
                 .filter(crate::schema::items::done.eq(false))
-                .order((user_id.desc(), ordinal.asc()))
+                .order((user_uuid.desc(), ordinal.asc()))
                 .select((crate::schema::items::all_columns, ordinal.nullable()))
                 .load::<(Item, Option<i32>)>(&mut conn)
                 .unwrap()
@@ -103,28 +199,28 @@ pub mod ssr {
             let votes: Vec<Vote> = all_votes
                 .inner_join(items::table)
                 .filter(item_done.eq(false))
-                .order((user_id.asc(), ordinal.asc()))
-                .select((user_id, item_id, ordinal))
+                .order((user_uuid.asc(), ordinal.asc()))
+                .select((votes::election_uuid, user_uuid, item_uuid, ordinal))
                 .load::<Vote>(&mut conn)
                 .unwrap();
 
             // the extra collections here are sad.
             let votes: Vec<Vec<_>> = votes
                 .into_iter()
-                .group_by(|v| v.user_id)
+                .group_by(|v| v.user_uuid.clone())
                 .into_iter()
-                .map(|(_, ballot)| ballot.into_iter().map(|v| v.item_id).collect())
+                .map(|(_, ballot)| ballot.into_iter().map(|v| v.item_uuid).collect())
                 .collect();
 
             match rcir::run_election(&votes, rcir::MajorityMode::RemainingMajority).ok()? {
-                rcir::ElectionResult::Winner(&iid) => {
+                rcir::ElectionResult::Winner(ref iid) => {
                     Some(all_items.find(iid).get_result::<Item>(&mut conn).unwrap())
                 }
                 rcir::ElectionResult::Tie(iids) => {
                     // TODO: maybe pick the oldest one?
                     Some(
                         all_items
-                            .find(*iids[0])
+                            .find(iids[0].clone())
                             .get_result::<Item>(&mut conn)
                             .unwrap(),
                     )
@@ -142,29 +238,29 @@ pub mod ssr {
             let votes = all_votes
                 .inner_join(items::table)
                 .filter(item_done.eq(false))
-                .filter(item_id.ne(winner.id))
-                .order((user_id.asc(), ordinal.asc()))
-                .select((user_id, item_id, ordinal))
+                .filter(item_uuid.ne(winner.uuid.clone()))
+                .order((user_uuid.asc(), ordinal.asc()))
+                .select((votes::election_uuid, user_uuid, item_uuid, ordinal))
                 .get_results::<Vote>(&mut conn)
                 .unwrap();
 
             // the extra collections here are sad.
             let votes: Vec<Vec<_>> = votes
                 .into_iter()
-                .group_by(|v| v.user_id)
+                .group_by(|v| v.user_uuid.clone())
                 .into_iter()
-                .map(|(_, ballot)| ballot.into_iter().map(|v| v.item_id).collect())
+                .map(|(_, ballot)| ballot.into_iter().map(|v| v.item_uuid.clone()).collect())
                 .collect();
 
-            match rcir::run_election(&votes, rcir::MajorityMode::RemainingMajority).ok()? {
-                rcir::ElectionResult::Winner(&iid) => {
+            match rcir::run_election(&votes.clone(), rcir::MajorityMode::RemainingMajority).ok()? {
+                rcir::ElectionResult::Winner(ref iid) => {
                     Some(all_items.find(iid).get_result::<Item>(&mut conn).unwrap())
                 }
                 rcir::ElectionResult::Tie(iids) => {
                     // TODO: maybe pick the oldest one?
                     Some(
                         all_items
-                            .find(*iids[0])
+                            .find(iids[0].clone())
                             .get_result::<Item>(&mut conn)
                             .unwrap(),
                     )
@@ -172,18 +268,24 @@ pub mod ssr {
             }
         }
 
-        pub fn save_ballot(uid: i32, ballot: &Ballot, context: &GraphQLContext) {
+        pub fn save_ballot(context: &GraphQLContext, ballot: &Ballot) {
+            let user = context.session.as_ref().unwrap().get_user(context).unwrap();
             let mut conn = context.pool.get().expect("Could not get connection");
 
-            diesel::delete(all_votes.filter(user_id.eq(&uid)))
-                .execute(&mut conn)
-                .unwrap();
+            diesel::delete(
+                all_votes
+                    .filter(votes::election_uuid.eq(ballot.election_uuid.clone()))
+                    .filter(user_uuid.eq(&user.uuid)),
+            )
+            .execute(&mut conn)
+            .unwrap();
 
             for (i, iid) in ballot.votes.iter().enumerate() {
                 diesel::insert_into(crate::schema::votes::table)
                     .values(Vote {
-                        user_id: uid,
-                        item_id: *iid,
+                        election_uuid: ballot.election_uuid.clone(),
+                        user_uuid: user.uuid.to_owned(),
+                        item_uuid: iid.clone().to_string(),
                         ordinal: i as i32,
                     })
                     .execute(&mut conn)
@@ -194,44 +296,69 @@ pub mod ssr {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(Identifiable, Queryable, Insertable))]
+#[cfg_attr(feature = "ssr", derive(Queryable, Insertable))]
+pub struct Session {
+    pub uuid: String,
+    pub user_uuid: String,
+    pub created: i64,
+    pub expires: i64,
+    pub data: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "ssr", derive(Queryable, Insertable))]
 pub struct Item {
-    pub id: i32,
+    pub uuid: String,
+    pub election_uuid: String,
     pub title: String,
     pub body: String,
     pub done: bool,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
-#[cfg_attr(feature = "ssr", derive(Identifiable, Queryable, Insertable))]
+#[cfg_attr(feature = "ssr", derive(Queryable, Insertable))]
 pub struct User {
-    pub id: i32,
-    pub username: String,
+    pub uuid: String,
+    pub email: String,
+    #[serde(skip_serializing)]
+    pub password_hash: String,
 }
 
 #[derive(Debug)]
-#[cfg_attr(feature = "ssr", derive(Queryable, Identifiable, Insertable))]
+#[cfg_attr(feature = "ssr", derive(Queryable, Insertable))]
 #[cfg_attr(feature = "ssr", diesel(primary_key(user_id, item_id)))]
 pub struct Vote {
-    pub user_id: i32,
-    pub item_id: i32,
+    pub election_uuid: String,
+    pub user_uuid: String,
+    pub item_uuid: String,
     pub ordinal: i32,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Ballot {
-    pub votes: Vec<i32>,
+    pub election_uuid: String,
+    pub votes: Vec<String>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "ssr", derive(Queryable, Insertable))]
+pub struct Election {
+    pub uuid: String,
+    pub name: String,
+    pub owner_uuid: String,
 }
 
 #[cfg_attr(feature = "ssr", derive(Queryable, Insertable))]
 #[cfg_attr(feature = "ssr", diesel(table_name = crate::schema::users))]
 pub struct NewUser {
-    pub username: String,
+    pub email: String,
+    pub password_hash: String,
 }
 
 #[cfg_attr(feature = "ssr", derive(Insertable))]
 #[cfg_attr(feature = "ssr", diesel(table_name = crate::schema::items))]
 pub struct NewItem {
+    pub election_uuid: String,
     pub title: String,
     pub body: String,
 }
