@@ -9,7 +9,7 @@ pub fn Elections() -> impl IntoView {
     view! {
         <div class="flex h-screen">
             <div class="flex flex-col lg:w-1/5 bg-slate-200 lg:h-screen p-6">
-                <h1 class="text-blue-500 text-4xl">"Your Elections"</h1>
+                <h1 class="text-blue-500 text-3xl">"Your Elections"</h1>
                 <ElectionList/>
             </div>
             <div class="flex flex-col lg:w-4/5">
@@ -77,8 +77,6 @@ pub fn NoElectionItem() -> impl IntoView {
 
 #[component]
 fn AddElectionForm(add_election: Action<AddElection, Result<Election, ServerFnError>>) -> impl IntoView {
-    // let add_item = create_server_action::<AddItem>();
-    // TODO - grab from query parameters
     let (name, set_name) = create_signal("".to_string());
 
     let value = add_election.value();
@@ -93,32 +91,42 @@ fn AddElectionForm(add_election: Action<AddElection, Result<Election, ServerFnEr
     let _has_error = move || value.with(|val| matches!(val, Some(Err(_))));
 
     view! {
-        <ActionForm action=add_election>
-            <input type="hidden" name="election_uuid" value=""/>
-            <div class="mt-10 gap-x-6 gap-y-8">
-                <div class="col-span-full">
-                    <label for="name">"Name of new election"</label>
-                    <div class="mt-2">
-                        <input
-                            type="text"
-                            maxlength="50"
-                            name="name"
-                            on:input=move |ev| {
-                                set_name(event_target_value(&ev));
-                            }
+        <label>
+            <input class="peer/showLabel absolute scale-0" type="checkbox"/>
+            <span class="block max-h-14 max-w-xs overflow-hidden rounded-lg bg-slate-100 px-4 py-0 text-blue-400 hover:text-blue-500 shadow-lg transition-all duration-300 peer-checked/showLabel:max-h-60">
+                <h3 class="flex h-14 cursor-pointer items-center font-bold">
+                    "Create new election"
+                </h3>
+                <span class="mb-2">
+                    <ActionForm action=add_election>
+                        <input type="hidden" name="election_uuid" value=""/>
+                        <div class="mt-10 gap-x-6 gap-y-8">
+                            <div class="col-span-full">
+                                <label for="name">"Name of new election"</label>
+                                <div class="mt-2">
+                                    <input
+                                        type="text"
+                                        maxlength="50"
+                                        name="name"
+                                        on:input=move |ev| {
+                                            set_name(event_target_value(&ev));
+                                        }
 
-                            prop:value=name
-                            class="bg-white block flex-1 border border-blue-500 border-solid py-1.5 pl-1 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm w-full"
-                        />
-                    </div>
-                </div>
-                <input
-                    type="submit"
-                    value="Create election"
-                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-2 mb-4"
-                />
-            </div>
-        </ActionForm>
+                                        prop:value=name
+                                        class="bg-white block flex-1 border border-blue-500 border-solid py-1.5 pl-1 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm w-full"
+                                    />
+                                </div>
+                            </div>
+                            <input
+                                type="submit"
+                                value="Create election"
+                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-2 mb-4"
+                            />
+                        </div>
+                    </ActionForm>
+                </span>
+            </span>
+        </label>
     }
 }
 
@@ -175,12 +183,9 @@ pub fn ElectionView(election: Election) -> impl IntoView {
     view! {
         <A href=format!("/elections/{}", election.uuid)>
             <div class="text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white">
-                // <div class="align-middle">{election.uuid}</div>
                 <div class="text-xl text-blue-700 hover:text-blue-900 font-semibold">
                     {election.name}
                 </div>
-            // <div class="col-span-4">{election.owner_uuid}</div>
-            // <div class="align-middle">{election.done}</div>
             </div>
         </A>
     }
@@ -190,11 +195,8 @@ pub fn ElectionView(election: Election) -> impl IntoView {
 pub fn ElectionVotingView(election: Election) -> impl IntoView {
     view! {
         <div class="p-6 m-3 rounded-lg bg-white">
-            // <div class="align-middle">{election.uuid}</div>
-            <h2 class="text-3xl text-blue-500">{election.name}</h2>
+            <h2 class="text-2xl text-blue-500">{election.name}</h2>
             <ItemList election_uuid=election.uuid/>
-        // <div class="col-span-4">{election.owner_uuid}</div>
-        // <div class="align-middle">{election.done}</div>
         </div>
     }
 }

@@ -52,6 +52,14 @@ use rc_voting_leptos::context::GraphQLContext;
 
     let pool = get_pool();
 
+    let mut conn = pool.get().expect("Could not get connections for migrations");
+    let migration_result = rc_voting_leptos::db::run_migrations(&mut conn);
+    match migration_result {
+        Ok(_) => info!("Migrations completed"),
+        Err(e) => error!("Could not run migrations {:?}", e)
+    };
+
+
     let context = Arc::new(GraphQLContext { pool: pool.clone(), session: None });
 
     // let routes = create_routes(&context);
