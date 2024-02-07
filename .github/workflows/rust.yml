@@ -40,4 +40,4 @@ jobs:
         context: .
         file: ./Dockerfile
         push: true
-        tags: ${{ secrets.DOCKER_REGISTRY }}/$DOCKER_TAG
+        tags: ${{ secrets.DOCKER_REGISTRY }}/${{env.DOCKER_TAG}}
