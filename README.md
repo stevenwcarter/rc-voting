@@ -28,7 +28,11 @@ Use [this guide](https://github.com/bram209/leptosfmt) to configure your IDE for
 The server will be available at http://localhost:3232/ after running this command.
 
 ```bash
+# Running on x86_64
 cargo leptos watch
+
+# Running on a mac
+LEPTOS_BIN_TARGET_TRIPLE=aarch64-apple-darwin cargo leptos watch
 ```
 
 ## Compiling for Release
@@ -47,6 +51,6 @@ cargo leptos end-to-end
 cargo leptos end-to-end --release
 ```
 
-Cargo-leptos uses Playwright as the end-to-end test tool.  
+Cargo-leptos uses Playwright as the end-to-end test tool.
 Tests are located in end2end/tests directory.
 
