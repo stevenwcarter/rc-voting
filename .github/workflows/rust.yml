@@ -45,4 +45,4 @@ jobs:
         context: .
         file: ./Dockerfile
         push: true
-        tags: ${{ secrets.DOCKER_REGISTRY }}/${{ GITHUB_ENV }}
+        tags: ${{ secrets.DOCKER_REGISTRY }}/${{ DOCKER_TAG }}
