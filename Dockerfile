@@ -9,17 +9,18 @@ RUN curl --proto '=https' --tlsv1.2 -LsSf https://github.com/leptos-rs/cargo-lep
 
 # Add the WASM target
 RUN rustup target add wasm32-unknown-unknown
+RUN rustup target add x86_64-unknown-linux-musl
 
 WORKDIR /work
 COPY . .
 
 RUN cargo leptos build --release -vv
 
-FROM rustlang/rust:nightly-alpine as runner
+FROM scratch as runner
 
 WORKDIR /app
 
-COPY --from=builder /work/target/release/rc-voting-leptos /app/
+COPY --from=builder /work/target/x86_64-unknown-linux-musl/release/rc-voting-leptos /app/
 COPY --from=builder /work/target/site /app/site
 COPY --from=builder /work/Cargo.toml /app/
 COPY .env /app/

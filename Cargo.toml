@@ -146,6 +146,7 @@ env = "DEV"
 #
 # Optional. Can be over-ridden with the command line parameter --bin-features
 bin-features = ["ssr"]
+bin-target-triple = "x86_64-unknown-linux-musl"
 
 # If the --no-default-features flag should be used when compiling the bin target
 #
