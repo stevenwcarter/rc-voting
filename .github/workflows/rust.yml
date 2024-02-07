@@ -20,13 +20,6 @@ jobs:
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v3
-    - name: Set environment for branch
-      run: |
-        if [[ $GITHUB_REF == 'refs/heads/main' ]]; then
-            echo "DOCKER_TAG=rc-voting:0.1.0" >> "$GITHUB_ENV"
-        else
-            echo "DOCKER_TAG=rc-voting:0.1.0-beta" >> "$GITHUB_ENV"
-        fi
     -
       name: Set up QEMU
       uses: docker/setup-qemu-action@v3
@@ -41,6 +34,8 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
     - name: Build and push docker image
       uses: docker/build-push-action@v4
+      env:
+        DOCKER_TAG: ${{ github.ref == 'refs/heads/main' && 'rc-voting:0.1.0' || 'rc-voting:0.1.0-beta' }}
       with:
         context: .
         file: ./Dockerfile
