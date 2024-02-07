@@ -53,6 +53,7 @@ pub fn LoginPage() -> impl IntoView {
         </div>
     }
 }
+
 #[component]
 pub fn SignupPage() -> impl IntoView {
     let signup_user = create_server_action::<SignupUser>();
@@ -146,7 +147,7 @@ async fn signup_user(email: String, password: String) -> Result<(), ServerFnErro
 
     if let Ok(session_cookie) = HeaderValue::from_str(&session_cookie.to_string()) {
         response.insert_header(header::SET_COOKIE, session_cookie);
-        leptos_axum::redirect("/election");
+        leptos_axum::redirect("/elections");
     }
 
     Ok(())
