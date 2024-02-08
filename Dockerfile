@@ -14,7 +14,7 @@ RUN rustup target add x86_64-unknown-linux-musl
 WORKDIR /work
 COPY . .
 
-RUN cargo leptos build --release -vv
+RUN LEPTOS_BIN_TARGET_TRIPLE=x86_64-unknown-linux-musl cargo leptos build --release -vv
 
 FROM scratch as runner
 

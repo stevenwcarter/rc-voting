@@ -183,8 +183,8 @@ pub fn ElectionView(election: Election) -> impl IntoView {
     view! {
         <A href=format!("/elections/{}", election.uuid)>
             <div class="text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white">
-                <div class="text-xl text-blue-700 hover:text-blue-900 font-semibold">
-                    {election.name}
+                <div class="flex flex-row text-xl text-blue-700 hover:text-blue-900 font-semibold">
+                    <div>{election.name}</div>
                 </div>
             </div>
         </A>
@@ -195,7 +195,12 @@ pub fn ElectionView(election: Election) -> impl IntoView {
 pub fn ElectionVotingView(election: Election) -> impl IntoView {
     view! {
         <div class="p-6 m-3 rounded-lg bg-white">
-            <h2 class="text-2xl text-blue-500">{election.name}</h2>
+            <div class="flex flex-row justify-between w-full">
+                <h2 class="text-2xl text-blue-500">{election.name}</h2>
+                <div class="text-xl text-blue-300">
+                    <A href=format!("/voting/{}", election.uuid)>Vote -></A>
+                </div>
+            </div>
             <ItemList election_uuid=election.uuid/>
         </div>
     }

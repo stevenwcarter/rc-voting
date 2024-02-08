@@ -220,12 +220,13 @@ pub mod ssr {
     }
 
     impl Vote {
-        pub fn run_election(context: &GraphQLContext) -> Option<Item> {
+        pub fn run_election(context: &GraphQLContext, election_uuid: &str) -> Option<Item> {
             let mut conn = context.pool.get().expect("Could not get connection");
 
             let votes: Vec<Vote> = all_votes
                 .inner_join(items::table)
                 .filter(item_done.eq(false))
+                .filter(items::election_uuid.eq(election_uuid))
                 .order((user_uuid.asc(), ordinal.asc()))
                 .select((votes::election_uuid, user_uuid, item_uuid, ordinal))
                 .load::<Vote>(&mut conn)
@@ -257,6 +258,7 @@ pub mod ssr {
 
         pub fn run_second_election(
             context: &GraphQLContext,
+            election_uuid: &str,
             winner: &Option<Item>,
         ) -> Option<Item> {
             let mut conn = context.pool.get().expect("Could not get connection");
@@ -266,6 +268,7 @@ pub mod ssr {
                 .inner_join(items::table)
                 .filter(item_done.eq(false))
                 .filter(item_uuid.ne(winner.uuid.clone()))
+                .filter(items::election_uuid.eq(election_uuid))
                 .order((user_uuid.asc(), ordinal.asc()))
                 .select((votes::election_uuid, user_uuid, item_uuid, ordinal))
                 .get_results::<Vote>(&mut conn)
@@ -295,7 +298,7 @@ pub mod ssr {
             }
         }
 
-        pub fn save_ballot(context: &GraphQLContext, ballot: &Ballot) {
+        pub fn save_ballot(context: &GraphQLContext, ballot: &Ballot) -> Result<usize> {
             let user = context.session.as_ref().unwrap().get_user(context).unwrap();
             let mut conn = context.pool.get().expect("Could not get connection");
 
@@ -307,17 +310,22 @@ pub mod ssr {
             .execute(&mut conn)
             .unwrap();
 
-            for (i, iid) in ballot.votes.iter().enumerate() {
-                diesel::insert_into(crate::schema::votes::table)
-                    .values(Vote {
-                        election_uuid: ballot.election_uuid.clone(),
-                        user_uuid: user.uuid.to_owned(),
-                        item_uuid: iid.clone().to_string(),
-                        ordinal: i as i32,
-                    })
-                    .execute(&mut conn)
-                    .unwrap();
-            }
+            let ballots: Vec<Vote> = ballot
+                .votes
+                .iter()
+                .enumerate()
+                .map(|(i, iid)| Vote {
+                    election_uuid: ballot.election_uuid.clone(),
+                    user_uuid: user.uuid.to_owned(),
+                    item_uuid: iid.to_owned(),
+                    ordinal: i as i32,
+                })
+                .collect();
+
+            diesel::insert_into(crate::schema::votes::table)
+                .values(&ballots)
+                .execute(&mut conn)
+                .context("Could not insert votes")
         }
     }
 }
@@ -342,7 +350,7 @@ pub struct Item {
     pub done: bool,
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "ssr", derive(Queryable, Insertable))]
 pub struct User {
     pub uuid: String,
@@ -351,7 +359,7 @@ pub struct User {
     pub password_hash: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "ssr", derive(Queryable, Insertable))]
 #[cfg_attr(feature = "ssr", diesel(primary_key(user_id, item_id)))]
 pub struct Vote {
@@ -361,13 +369,13 @@ pub struct Vote {
     pub ordinal: i32,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Ballot {
     pub election_uuid: String,
     pub votes: Vec<String>,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "ssr", derive(Queryable, Insertable))]
 pub struct Election {
     pub uuid: String,

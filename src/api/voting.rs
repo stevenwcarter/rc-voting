@@ -34,14 +34,16 @@ async fn handle_vote(
 #[cfg(feature="ssr")]
 async fn handle_election(
     Extension(context): Extension<Arc<GraphQLContext>>,
+    election_uuid: String,
 ) -> impl IntoResponse {
-    Json(Vote::run_election(&context))
+    Json(Vote::run_election(&context, &election_uuid))
 }
 
 #[cfg(feature="ssr")]
 async fn handle_second_election(
     Extension(context): Extension<Arc<GraphQLContext>>,
+    election_uuid: String,
 ) -> impl IntoResponse {
-    let item = Vote::run_election(&context);
-    Json(Vote::run_second_election(&context, &item))
+    let item = Vote::run_election(&context, &election_uuid);
+    Json(Vote::run_second_election(&context, &election_uuid, &item))
 }
