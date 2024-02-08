@@ -239,7 +239,7 @@ pub fn VotingInterface(election_uuid: String) -> impl IntoView {
                                             view! {
                                                 <div class="">
                                                     <div>{voted_for}</div>
-                                                    <div class="mt-8 bg-slate-200 p-4 radius-2xl">
+                                                    <div class="mt-8 bg-slate-200 p-4 sm:rounded-2xl">
                                                         <h3 class="text-2xl text-blue-900">
                                                             "Click an option to vote for it"
                                                         </h3>
