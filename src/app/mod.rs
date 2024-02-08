@@ -33,7 +33,7 @@ pub fn App() -> impl IntoView {
                 <Routes>
                     <Route path="" view=LoginPage/>
                     <Route path="/sign-up" view=SignupPage/>
-                    <Route path="/voting/:election_uuid" view=Voting/>
+                    // <Route path="/voting/:election_uuid" view=Voting/>
                     <Route path="/elections" view=Elections>
                         <Route path=":election_uuid" view=ElectionItem/>
                         <Route path="" view=NoElectionItem/>

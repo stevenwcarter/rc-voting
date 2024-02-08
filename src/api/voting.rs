@@ -27,7 +27,7 @@ async fn handle_vote(
     let user = context.session.as_ref().unwrap().get_user(&context).unwrap();
     log::info!("{} voted", user.email);
 
-    Vote::save_ballot(&context, &ballot);
+    let _ = Vote::save_ballot(&context, &ballot);
     Json(ballot).into_response()
 }
 
