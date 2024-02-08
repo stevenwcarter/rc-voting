@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use leptos::*;
 use leptos::IntoView;
 use crate::error_template::ErrorTemplate;
@@ -28,33 +26,80 @@ pub fn Voting() -> impl IntoView {
 
 #[component]
 pub fn ItemView(ballot_items: Result<Vec<(Item, Option<i32>)>, ServerFnError>, item: Item, voted: bool, position: Option<i32>, election_uuid: String) -> impl IntoView {
-    let handler_election_uuid = election_uuid.clone();
+    let (election_uuid, set_election_uuid) = create_signal(election_uuid);
     let handler_item = item.clone();
-    let click_handler = move |_| {
-        if !voted {
-                if let Ok(ballot_items) = ballot_items.clone() {
-                    let mut votes: Vec<String> = ballot_items.iter().filter(|(_, i)| i.is_some()).map(|(item, _)| item.uuid.clone()).collect();
-                    votes.push(handler_item.uuid.clone());
+    let save_ballot_action = use_context::<SaveBallotAction>().unwrap().0;
 
-                    let new_ballot = Ballot {
-                        election_uuid: handler_election_uuid.clone(),
-                        votes,
-                    };
+    let up_item = item.clone();
+    let up_ballot_items = ballot_items.clone();
+    let down_item = item.clone();
+    let down_ballot_items = ballot_items.clone();
+    let add_ballot_items = ballot_items.clone();
 
-                spawn_local(async move {
-                    logging::log!("{:?}", new_ballot);
+    let move_up_click_handler = move |_|{
+        if !voted { return; }
 
-                    save_ballot(new_ballot).await;
-                });
-                }
+        if let Ok(ballot_items) = up_ballot_items.clone() {
+            let mut votes: Vec<String> = ballot_items.iter().filter(|(_, i)| i.is_some()).map(|(item, _)| item.uuid.clone()).collect();
+            let index_to_move = votes.iter().position(|v| *v == up_item.uuid.clone());
+            if let Some(index_to_move) = index_to_move {
+                if index_to_move == 0 { return; }
+                votes.swap(index_to_move, index_to_move - 1);
+
+                let new_ballot = Ballot {
+                    election_uuid: election_uuid().clone(),
+                    votes,
+                };
+
+                save_ballot_action.dispatch(new_ballot.into());
             }
+        }
+    };
+    let move_down_click_handler = move |_|{
+        if !voted { return; }
+
+        if let Ok(ballot_items) = down_ballot_items.clone() {
+            let mut votes: Vec<String> = ballot_items.iter().filter(|(_, i)| i.is_some()).map(|(item, _)| item.uuid.clone()).collect();
+            let index_to_move = votes.iter().position(|v| *v == down_item.uuid.clone());
+            if let Some(index_to_move) = index_to_move {
+                if index_to_move == votes.len() - 1 { return; }
+                votes.swap(index_to_move, index_to_move + 1);
+
+                let new_ballot = Ballot {
+                    election_uuid: election_uuid().clone(),
+                    votes,
+                };
+
+                save_ballot_action.dispatch(new_ballot.into());
+            }
+        }
+    };
+    let add_to_voting_click_handler = move |_| {
+        if voted { return; }
+        if let Ok(ballot_items) = add_ballot_items.clone() {
+            let mut votes: Vec<String> = ballot_items.iter().filter(|(_, i)| i.is_some()).map(|(item, _)| item.uuid.clone()).collect();
+            votes.push(handler_item.uuid.clone());
+
+            let new_ballot = Ballot {
+                election_uuid: election_uuid().clone(),
+                votes,
+            };
+
+            logging::log!("{:?}", new_ballot);
+
+            save_ballot_action.dispatch(new_ballot.into());
+        }
     };
 
     view! {
         <div
-            on:click=click_handler
-            class="text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white"
+            on:click=add_to_voting_click_handler
+            class="flex text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white"
         >
+            <div class="flex flex-col">
+                <div on:click=move_up_click_handler>UP</div>
+                <div on:click=move_down_click_handler>DOWN</div>
+            </div>
             {item.title}
             -
             {position.unwrap_or(-1)}
@@ -63,20 +108,19 @@ pub fn ItemView(ballot_items: Result<Vec<(Item, Option<i32>)>, ServerFnError>, i
     }
 }
 
+#[derive(Copy, Clone)]
+struct SaveBallotAction(Action<SaveBallot, Result<(), ServerFnError>>);
+
 #[component]
 pub fn VotingInterface(election_uuid: String) -> impl IntoView {
     let (election_uuid, set_election_uuid) = create_signal(election_uuid.clone());
-    let get_ballot_action = create_server_action::<GetBallot>();
     let save_ballot_action = create_server_action::<SaveBallot>();
+    provide_context(SaveBallotAction(save_ballot_action));
 
-    let ballot = create_resource(move || (get_ballot_action.version(),save_ballot_action.version()), move |_| get_ballot(election_uuid().clone()));
-    let on_update = move || {
-        spawn_local(async move{
-                get_ballot(election_uuid().clone()).await;
-        })
-    };
-    let closure_ballot = ballot.clone();
-    let ballot_items = move || { closure_ballot.clone() };
+    let ballot = create_resource(save_ballot_action.version(), move |_| get_ballot(election_uuid().clone()));
+
+    let closure_ballot = ballot;
+    let ballot_items = move || { closure_ballot };
 
     view! {
         <Transition fallback=move || view! { <p>"Loading..."</p> }>
