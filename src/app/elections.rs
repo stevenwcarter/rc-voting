@@ -7,12 +7,12 @@ use super::items::ItemList;
 #[component]
 pub fn Elections() -> impl IntoView {
     view! {
-        <div class="flex h-screen">
-            <div class="flex flex-col lg:w-1/5 bg-slate-200 lg:h-screen p-6">
+        <div class="flex md:min-h-screen flex-col md:flex-row">
+            <div class="flex flex-col w-full md:w-1/5 from-slate-400 to-slate-200 md:min-h-screen p-6 bg-gradient-to-tr">
                 <h1 class="text-blue-500 text-3xl">"Your Elections"</h1>
                 <ElectionList/>
             </div>
-            <div class="flex flex-col lg:w-4/5">
+            <div class="flex flex-col md:w-4/5 w-full">
                 <Outlet/>
             </div>
         </div>
@@ -37,7 +37,6 @@ pub fn ElectionItem() -> impl IntoView {
         })
     };
     let election = create_resource(election_uuid, |election_uuid| async move {
-        logging::log!("Loading election from API: {}", election_uuid);
         load_election(election_uuid).await
     });
     view! {
@@ -100,7 +99,7 @@ fn AddElectionForm(add_election: Action<AddElection, Result<Election, ServerFnEr
                 <span class="mb-2">
                     <ActionForm action=add_election>
                         <input type="hidden" name="election_uuid" value=""/>
-                        <div class="mt-10 gap-x-6 gap-y-8">
+                        <div class="mt-4 gap-y-2 flex flex-col">
                             <div class="col-span-full">
                                 <label for="name">"Name of new election"</label>
                                 <div class="mt-2">
@@ -214,10 +213,8 @@ pub async fn get_elections() -> Result<Vec<Election>, ServerFnError> {
     use leptos_axum::extract;
     use crate::api::SessionContext;
 
-    logging::log!("Getting session context");
     let SessionContext(context): SessionContext = extract().await?;
 
-    logging::log!("Getting elections");
     Election::list(&context).map_err(|e| ServerFnError::ServerError(format!("Could not get list of elections: {}", e)))
 }
 
@@ -240,7 +237,6 @@ pub async fn add_election(name: String) -> Result<Election, ServerFnError> {
     use leptos_axum::extract;
     use crate::api::SessionContext;
 
-    logging::log!("Adding...");
     let SessionContext(context): SessionContext = extract().await?;
 
     let election = Election::new(&context, &name).map_err(|_err| {

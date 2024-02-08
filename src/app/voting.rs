@@ -1,5 +1,7 @@
 use leptos::*;
 use leptos::IntoView;
+use leptos_icons::*;
+use icondata as i;
 use crate::error_template::ErrorTemplate;
 use leptos_router::*;
 use super::items::ItemList;
@@ -18,7 +20,7 @@ pub fn Voting() -> impl IntoView {
         })
     };
     view! {
-        <div class="flex h-screen w-full">
+        <div class="flex h-screen w-full bg-slate-400">
             <VotingInterface election_uuid=election_uuid()/>
         </div>
     }
@@ -35,6 +37,15 @@ pub fn ItemView(ballot_items: Result<Vec<(Item, Option<i32>)>, ServerFnError>, i
     let down_item = item.clone();
     let down_ballot_items = ballot_items.clone();
     let add_ballot_items = ballot_items.clone();
+    let remove_item = item.clone();
+    let remove_ballot_items = ballot_items.clone();
+
+    let vote_check = ballot_items.clone();
+    let voted_items: Vec<(Item, Option<i32>)> = if let Ok(vote_check) = vote_check {
+        vote_check.iter().filter(|(_, i)| i.is_some()).cloned().collect()
+    } else {
+        Vec::new()
+    };
 
     let move_up_click_handler = move |_|{
         if !voted { return; }
@@ -74,6 +85,24 @@ pub fn ItemView(ballot_items: Result<Vec<(Item, Option<i32>)>, ServerFnError>, i
             }
         }
     };
+    let remove_from_voting_click_handler = move |_| {
+        if !voted { return; }
+        if let Ok(ballot_items) = remove_ballot_items.clone() {
+            let votes: Vec<String> = ballot_items
+                .iter()
+                .filter(|(_, i)| i.is_some())
+                .map(|(item, _)| item.uuid.clone())
+                .filter(|v| *v != remove_item.uuid.clone())
+                .collect();
+
+            let new_ballot = Ballot {
+                election_uuid: election_uuid().clone(),
+                votes,
+            };
+
+            save_ballot_action.dispatch(new_ballot.into());
+        }
+    };
     let add_to_voting_click_handler = move |_| {
         if voted { return; }
         if let Ok(ballot_items) = add_ballot_items.clone() {
@@ -85,8 +114,6 @@ pub fn ItemView(ballot_items: Result<Vec<(Item, Option<i32>)>, ServerFnError>, i
                 votes,
             };
 
-            logging::log!("{:?}", new_ballot);
-
             save_ballot_action.dispatch(new_ballot.into());
         }
     };
@@ -95,15 +122,43 @@ pub fn ItemView(ballot_items: Result<Vec<(Item, Option<i32>)>, ServerFnError>, i
         <div
             on:click=add_to_voting_click_handler
             class="flex text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white"
+            class=("cursor-pointer", move || !voted)
         >
-            <div class="flex flex-col">
-                <div on:click=move_up_click_handler>UP</div>
-                <div on:click=move_down_click_handler>DOWN</div>
+            <div class="flex flex-col" class=("invisible", move || !voted)>
+                <button
+                    class=""
+                    class=("invisible", move || position.unwrap_or(-1) == 0)
+                    on:click=move_up_click_handler
+                    title="move up in vote order"
+                >
+                    <Icon icon=i::AiArrowUpOutlined/>
+                </button>
+                <button
+                    class=""
+                    class=(
+                        "invisible",
+                        move || { position.unwrap_or_default() == (voted_items.len() as i32 - 1) },
+                    )
+
+                    on:click=move_down_click_handler
+                    title="move down in vote order"
+                >
+                    <Icon icon=i::AiArrowDownOutlined/>
+                </button>
             </div>
-            {item.title}
-            -
-            {position.unwrap_or(-1)}
-            <div class="text-xl text-blue-700 hover:text-blue-900 font-semibold"></div>
+            <div class="w-full flex items-center justify-center">{item.title}</div>
+            <div
+                class="flex flex-col items-center justify-center"
+                class=("invisible", move || !voted)
+            >
+                <button
+                    class="text-2xl text-red-800 text-opacity-70 hover:text-opacity-100"
+                    on:click=remove_from_voting_click_handler
+                    title="remove vote"
+                >
+                    <Icon icon=i::CgRemoveR/>
+                </button>
+            </div>
         </div>
     }
 }
@@ -178,8 +233,8 @@ pub fn VotingInterface(election_uuid: String) -> impl IntoView {
                                             view! {
                                                 <div class="">
                                                     <div>{voted_for}</div>
-                                                    <h3>"Click one to include in the vote"</h3>
-                                                    <div class="text-slate-400">{unvoted}</div>
+                                                    <h3 class="text-2xl">"Click one to include in the vote"</h3>
+                                                    <div>{unvoted}</div>
                                                 </div>
                                             }
                                                 .into_view()
@@ -229,11 +284,9 @@ pub async fn get_ballot(election_uuid: String) -> Result<Vec<(Item, Option<i32>)
     use leptos_axum::extract;
     use crate::api::SessionContext;
 
-    logging::log!("Getting session context");
     let SessionContext(context): SessionContext = extract().await?;
     let session = context.session.as_ref().unwrap();
 
-    logging::log!("Getting elections");
     Ok(Item::for_user(&context, &session.user_uuid, &election_uuid))
 }
 
@@ -241,9 +294,6 @@ pub async fn get_ballot(election_uuid: String) -> Result<Vec<(Item, Option<i32>)
 pub async fn save_ballot(ballot: Ballot) -> Result<(), ServerFnError> {
     use leptos_axum::extract;
     use crate::api::SessionContext;
-    use log::info;
-
-    info!("{:#?}", ballot);
 
     let SessionContext(context): SessionContext = extract().await?;
 
