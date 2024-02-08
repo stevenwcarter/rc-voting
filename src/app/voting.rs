@@ -20,7 +20,13 @@ pub fn Voting() -> impl IntoView {
         })
     };
     view! {
-        <div class="flex h-screen w-full bg-slate-400">
+        <div class="flex h-screen w-full bg-gradient-to-b from-slate-700 to-slate-500">
+            <A href="/elections">
+                <div class="flex gap-2 border border-solid border-blue-500 rounded-full text-blue-800 text-xl flex-nowrap absolute left-2 top-2 py-3 px-4 items-center bg-slate-200">
+                    <Icon icon=i::FaLeftLongSolid/>
+                    "Your elections"
+                </div>
+            </A>
             <VotingInterface election_uuid=election_uuid()/>
         </div>
     }
@@ -233,8 +239,15 @@ pub fn VotingInterface(election_uuid: String) -> impl IntoView {
                                             view! {
                                                 <div class="">
                                                     <div>{voted_for}</div>
-                                                    <h3 class="text-2xl">"Click one to include in the vote"</h3>
-                                                    <div>{unvoted}</div>
+                                                    <div class="mt-8 bg-slate-200 p-4 radius-2xl">
+                                                        <h3 class="text-2xl text-blue-900">
+                                                            "Click an option to vote for it"
+                                                        </h3>
+                                                        <h4 class="text-xl text-blue-900">
+                                                            "Then use the arrows to rank"
+                                                        </h4>
+                                                        <div>{unvoted}</div>
+                                                    </div>
                                                 </div>
                                             }
                                                 .into_view()

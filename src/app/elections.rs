@@ -1,4 +1,6 @@
 use leptos::*;
+use leptos_icons::*;
+use icondata as i;
 use crate::error_template::ErrorTemplate;
 use crate::models::Election;
 use leptos_router::*;
@@ -7,12 +9,12 @@ use super::items::ItemList;
 #[component]
 pub fn Elections() -> impl IntoView {
     view! {
-        <div class="flex md:min-h-screen flex-col md:flex-row">
+        <div class="flex md:min-h-screen flex-col md:flex-row bg-gradient-to-br from-slate-400 to-slate-200">
             <div class="flex flex-col w-full md:w-1/5 from-slate-400 to-slate-200 md:min-h-screen p-6 bg-gradient-to-tr">
-                <h1 class="text-blue-500 text-3xl">"Your Elections"</h1>
+                <h1 class="text-blue-700 text-3xl">"Your Elections"</h1>
                 <ElectionList/>
             </div>
-            <div class="flex flex-col md:w-4/5 w-full">
+            <div class="flex flex-col md:w-4/5 w-full bg-gradient-to-br from-slate-400 to-slate-200">
                 <Outlet/>
             </div>
         </div>
@@ -193,11 +195,15 @@ pub fn ElectionView(election: Election) -> impl IntoView {
 #[component]
 pub fn ElectionVotingView(election: Election) -> impl IntoView {
     view! {
-        <div class="p-6 m-3 rounded-lg bg-white">
+        <div class="p-6 m-3 rounded-lg bg-slate-100">
             <div class="flex flex-row justify-between w-full">
                 <h2 class="text-2xl text-blue-500">{election.name}</h2>
-                <div class="text-xl text-blue-300">
-                    <A href=format!("/voting/{}", election.uuid)>Vote -></A>
+                <div class="text-xl text-blue-700">
+                    <A href=format!("/voting/{}", election.uuid)>
+                        <div class="flex border border-solid border-blue-500 rounded-full p-3 gap-2 items-center">
+                            "Vote " <Icon icon=i::FaRightLongSolid/>
+                        </div>
+                    </A>
                 </div>
             </div>
             <ItemList election_uuid=election.uuid/>

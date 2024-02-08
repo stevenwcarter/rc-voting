@@ -104,7 +104,7 @@ fn ItemForm(add_item: Action<AddItem, Result<Item, ServerFnError>>, election_uui
                             }
 
                             prop:value=title
-                            class="block flex-1 border border-blue-500 border-solid bg-transparent py-1.5 pl-1 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm w-full"
+                            class="block flex-1 border border-blue-500 border-solid bg-white py-1.5 pl-1 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm w-full"
                         />
                     </div>
                 </div>
