@@ -170,21 +170,21 @@ pub fn ItemView(ballot_items: Result<Vec<(Item, Option<i32>)>, ServerFnError>, i
 
     view! {
         <div
-            on:click=add_to_voting_click_handler
+            on:click=add_to_voting_click_handler.clone()
             class="flex text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white"
             class=("cursor-pointer", move || !voted)
         >
-            <div class="flex flex-col" class=("invisible", move || !voted)>
+            <div class="flex flex-col justify-around gap-5" class=("invisible", move || !voted)>
                 <button
-                    class=""
+                    class="text-4xl"
                     class=("invisible", move || position.unwrap_or(-1) == 0)
                     on:click=move_up_click_handler
                     title="move up in vote order"
                 >
-                    <Icon icon=i::AiArrowUpOutlined/>
+                    <Icon icon=i::BsArrowUpSquare/>
                 </button>
                 <button
-                    class=""
+                    class="text-4xl"
                     class=(
                         "invisible",
                         move || { position.unwrap_or_default() == (voted_items.len() as i32 - 1) },
@@ -193,21 +193,38 @@ pub fn ItemView(ballot_items: Result<Vec<(Item, Option<i32>)>, ServerFnError>, i
                     on:click=move_down_click_handler
                     title="move down in vote order"
                 >
-                    <Icon icon=i::AiArrowDownOutlined/>
+                    <Icon icon=i::BsArrowDownSquare/>
                 </button>
             </div>
-            <div class="w-full flex items-center justify-center">{item.title}</div>
-            <div
-                class="flex flex-col items-center justify-center"
-                class=("invisible", move || !voted)
-            >
-                <button
-                    class="text-2xl text-red-800 text-opacity-70 hover:text-opacity-100"
-                    on:click=remove_from_voting_click_handler
-                    title="remove vote"
+            <div class="w-full flex flex-col items-center justify-center p-4">
+                <div class="text-2xl mb-3">{item.title}</div>
+                <div>{item.body}</div>
+            </div>
+            <div class="flex flex-col items-center justify-center">
+                <Show
+                    when=move || voted
+                    fallback=move || {
+                        let inner_add_to_voting_click_handler = add_to_voting_click_handler.clone();
+                        view! {
+                            <button
+                                class="text-5xl text-green-800"
+                                on:click=inner_add_to_voting_click_handler
+                                title="vote for this option"
+                            >
+                                <Icon icon=i::BiCircleRegular/>
+                            </button>
+                        }
+                    }
                 >
-                    <Icon icon=i::CgRemoveR/>
-                </button>
+
+                    <button
+                        class="text-4xl text-red-800 text-opacity-70 hover:text-opacity-100"
+                        on:click=remove_from_voting_click_handler.clone()
+                        title="remove vote"
+                    >
+                        <Icon icon=i::CgRemoveR/>
+                    </button>
+                </Show>
             </div>
         </div>
     }
@@ -226,7 +243,7 @@ pub fn Winners(winners: Option<WinnersResult>) -> impl IntoView {
 
     view! {
         <div class="text-blue-800 flex flex-col items-center justify-center w-full">
-            <div class="text-xl">"Winners section"</div>
+            <div class="text-xl">"Current Winners:"</div>
             <div class="flex flex-row gap-4 w-full justify-center items-center">
                 <Show when=move || winner.get().is_some() fallback=|| "No winners yet">
                     <div class="text-xl">"Winner"</div>
@@ -322,11 +339,11 @@ pub fn VotingInterface(election_uuid: String) -> impl IntoView {
                                                             <div class="">
                                                                 <div>{voted_for}</div>
                                                                 <div class="mt-8 bg-slate-200 p-4 sm:rounded-2xl">
-                                                                    <h3 class="text-2xl text-blue-900">
-                                                                        "Click an option to vote for it"
+                                                                    <h3 class="text-xl text-blue-900">
+                                                                        "Click the circle to vote for an option"
                                                                     </h3>
-                                                                    <h4 class="text-xl text-blue-900">
-                                                                        "Then use the arrows to rank"
+                                                                    <h4 class="text-lg text-blue-900">
+                                                                        "Then use the arrows above to rank"
                                                                     </h4>
                                                                     <div>{unvoted}</div>
                                                                 </div>
