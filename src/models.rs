@@ -382,6 +382,7 @@ pub struct Vote {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Ballot {
     pub election_uuid: String,
+    #[serde(default)]
     pub votes: Vec<String>,
 }
 
