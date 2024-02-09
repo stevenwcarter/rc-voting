@@ -15,6 +15,7 @@ pub mod ssr {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     use super::*;
+    use crate::app::voting::run_second_election;
     use crate::context::GraphQLContext;
     use crate::schema::items::dsl::{done as item_done, items as all_items};
     use crate::schema::users::dsl::{email as users_uname, users as all_users};
@@ -220,6 +221,15 @@ pub mod ssr {
     }
 
     impl Vote {
+        pub fn run_elections(
+            context: &GraphQLContext,
+            election_uuid: &str,
+        ) -> (Option<Item>, Option<Item>) {
+            let winner = Self::run_election(context, election_uuid);
+            let runner_up = Self::run_second_election(context, election_uuid, &winner);
+
+            (winner, runner_up)
+        }
         pub fn run_election(context: &GraphQLContext, election_uuid: &str) -> Option<Item> {
             let mut conn = context.pool.get().expect("Could not get connection");
 

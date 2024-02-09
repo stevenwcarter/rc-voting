@@ -31,15 +31,21 @@ pub fn App() -> impl IntoView {
         }>
             <main class="">
                 <Routes>
-                    <Route path="" view=LoginPage/>
-                    <Route path="/sign-up" view=SignupPage/>
-                    <Route path="/voting/:election_uuid" view=Voting/>
+                    <Route path="/" view=RedirectElections/>
                     <Route path="/elections" view=Elections>
                         <Route path=":election_uuid" view=ElectionItem/>
                         <Route path="" view=NoElectionItem/>
                     </Route>
+                    <Route path="/login" view=LoginPage/>
+                    <Route path="/sign-up" view=SignupPage/>
+                    <Route path="/voting/:election_uuid" view=Voting/>
                 </Routes>
             </main>
         </Router>
     }
+}
+
+#[component]
+pub fn RedirectElections() -> impl IntoView {
+    view! { <Redirect path="/elections"/> }
 }

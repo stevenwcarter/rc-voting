@@ -51,6 +51,7 @@ uuid = { version = "1.2.2", features = ["v4"], default-features = false, optiona
 http = "1"
 leptos_icons = "0.3.0"
 icondata = "0.3.0"
+leptos-use = "0.10.1"
 
 [features]
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
@@ -89,6 +90,8 @@ ssr = [
     "dep:leptos_axum",
     "dep:juniper",
     "leptos/ssr",
+    "leptos-use/ssr",
+    "leptos-use/axum",
     "leptos_meta/ssr",
     "leptos_router/ssr",
     "dep:tracing",

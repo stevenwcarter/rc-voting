@@ -2,14 +2,22 @@ use leptos::*;
 use leptos::IntoView;
 use leptos_icons::*;
 use icondata as i;
-use crate::error_template::ErrorTemplate;
+use leptos_use::{use_cookie, utils::FromToStringCodec};
+use crate::{app::login::{LoginForm, SignupForm}, error_template::ErrorTemplate};
 use leptos_router::*;
 use super::items::ItemList;
 use super::elections::ElectionItemParams;
 use crate::models::{Item, Election, Vote, Ballot};
 
+#[derive(Copy, Clone)]
+pub struct SetSignedIn(pub WriteSignal<bool>);
+
 #[component]
 pub fn Voting() -> impl IntoView {
+    let (auth_cookie, _) = use_cookie::<String, FromToStringCodec>("X-Login-Session-ID");
+    let (is_signed_in, set_is_signed_in) = create_signal(auth_cookie.get().is_some());
+    provide_context(SetSignedIn(set_is_signed_in));
+    let (sign_in, set_sign_in) = create_signal::<bool>(false);
     let params = use_params::<ElectionItemParams>();
     let election_uuid = move || {
         params.with(|params| {
@@ -20,21 +28,57 @@ pub fn Voting() -> impl IntoView {
         })
     };
     view! {
-        <div class="flex h-screen w-full bg-gradient-to-b from-slate-700 to-slate-500">
-            <A href="/elections">
-                <div class="flex gap-2 border border-solid border-blue-500 rounded-full text-blue-800 text-xl flex-nowrap absolute left-2 top-2 py-3 px-4 items-center bg-slate-200">
-                    <Icon icon=i::FaLeftLongSolid/>
-                    "Your elections"
+        <div class="flex min-h-screen min-w-full bg-gradient-to-b from-slate-400 to-slate-200">
+            <Show
+                when=move || { is_signed_in() }
+                fallback=move || {
+                    view! {
+                        <div class="h-screen min-w-full flex flex-col items-center align-center justify-center">
+                            <div class="text-2xl text-blue-600">
+                                "Sign in or sign up to participate"
+                            </div>
+                            <button
+                                class="bg-blue-500 rounded-lg text-white p-3 m-2"
+                                on:click=move |_| {
+                                    set_sign_in.update(|sign_in| *sign_in = !*sign_in)
+                                }
+                            >
+
+                                <Show when=move || { sign_in() } fallback=|| { "Sign up instead" }>
+                                    "Log in instead"
+                                </Show>
+                            </button>
+                            <Show
+                                when=move || { sign_in() }
+                                fallback=|| {
+                                    view! { <LoginForm redirect=false/> }
+                                }
+                            >
+
+                                <SignupForm redirect=false/>
+                            </Show>
+                        </div>
+                    }
+                }
+            >
+
+                <div class="min-w-full">
+                    <A href="/elections">
+                        <div class="flex gap-2 border border-solid border-blue-500 rounded-full text-blue-800 text-xl flex-nowrap absolute left-2 top-2 py-3 px-4 items-center bg-slate-200">
+                            <Icon icon=i::FaLeftLongSolid/>
+                            "Your elections"
+                        </div>
+                    </A>
+                    <VotingInterface election_uuid=election_uuid()/>
                 </div>
-            </A>
-            <VotingInterface election_uuid=election_uuid()/>
+            </Show>
         </div>
     }
 }
 
 #[component]
 pub fn ItemView(ballot_items: Result<Vec<(Item, Option<i32>)>, ServerFnError>, item: Item, voted: bool, position: Option<i32>, election_uuid: String) -> impl IntoView {
-    let (election_uuid, set_election_uuid) = create_signal(election_uuid);
+    let (election_uuid, _) = create_signal(election_uuid);
     let handler_item = item.clone();
     let save_ballot_action = use_context::<SaveBallotAction>().unwrap().0;
 
@@ -169,104 +213,140 @@ pub fn ItemView(ballot_items: Result<Vec<(Item, Option<i32>)>, ServerFnError>, i
     }
 }
 
+#[component]
+pub fn Winners(winners: Option<Result<(Option<Item>, Option<Item>), ServerFnError>>) -> impl IntoView {
+    let (winner, set_winner) = create_signal::<Option<Item>>(None);
+    let (runner_up, set_runner_up) = create_signal::<Option<Item>>(None);
+
+    if let Some(winners) = winners {
+        if let Ok((winner, runner_up)) = winners {
+            set_winner(winner);
+            set_runner_up(runner_up);
+        }
+    }
+
+    view! {
+        <div class="text-blue-800 flex flex-col items-center justify-center w-full">
+            <div class="text-xl">"Winners section"</div>
+            <div class="flex flex-row gap-4 w-full justify-center items-center">
+                <Show when=move || winner.get().is_some() fallback=|| "No winners yet">
+                    <div class="text-xl">"Winner"</div>
+                    <div class="text-2xl">{winner.get().unwrap().title}</div>
+                </Show>
+            </div>
+            <div class="flex flex-row gap-4 w-full justify-center items-center">
+                <Show when=move || runner_up.get().is_some() fallback=|| "">
+                    <div class="text-xl">"Runner up"</div>
+                    <div class="text-2xl">{runner_up.get().unwrap().title}</div>
+                </Show>
+            </div>
+        </div>
+    }
+}
+
 #[derive(Copy, Clone)]
 struct SaveBallotAction(Action<SaveBallot, Result<(), ServerFnError>>);
 
 #[component]
 pub fn VotingInterface(election_uuid: String) -> impl IntoView {
-    let (election_uuid, set_election_uuid) = create_signal(election_uuid.clone());
+    let (election_uuid, _) = create_signal(election_uuid.clone());
     let save_ballot_action = create_server_action::<SaveBallot>();
     provide_context(SaveBallotAction(save_ballot_action));
 
     let ballot = create_resource(save_ballot_action.version(), move |_| get_ballot(election_uuid().clone()));
+    let winners = create_resource(save_ballot_action.version(), move |_| get_winners(election_uuid().clone()));
 
     let closure_ballot = ballot;
     let ballot_items = move || { closure_ballot };
 
     view! {
-        <Transition fallback=move || view! { <p>"Loading..."</p> }>
-            <ErrorBoundary fallback=|errors| {
-                view! { <ErrorTemplate errors=errors/> }
-            }>
-                {move || {
-                    let current_elections = {
-                        move || {
-                            ballot
-                                .get()
-                                .map(move |ballot| match ballot {
-                                    Err(e) => {
-                                        view! { <pre>"Server error: " {e.to_string()}</pre> }
-                                            .into_view()
-                                    }
-                                    Ok(ballot) => {
-                                        if ballot.is_empty() {
-                                            view! {
-                                                <p>"You don't currently have any elections running"</p>
-                                            }
-                                                .into_view()
-                                        } else {
-                                            let voted_for = ballot
-                                                .clone()
-                                                .into_iter()
-                                                .filter(|i| i.1.is_some())
-                                                .map(move |(item, position)| {
-                                                    view! {
-                                                        <ItemView
-                                                            ballot_items=ballot_items().get().unwrap()
-                                                            item=item
-                                                            voted=true
-                                                            position=position
-                                                            election_uuid=election_uuid().clone()
-                                                        />
+        <div class="h-full w-full flex items-center justify-center">
+            <div class="flex flex-col w-full md:w-1/2 xl:w-1/3 center place-content-center align-content-center">
+                <div class="w-full">
+                    <Transition fallback=move || view! { <p>"Loading..."</p> }>
+                        <ErrorBoundary fallback=|errors| {
+                            view! { <ErrorTemplate errors=errors/> }
+                        }>
+                            <Winners winners=winners.get()/>
+                        </ErrorBoundary>
+                    </Transition>
+                    <Transition fallback=move || view! { <p>"Loading..."</p> }>
+                        <ErrorBoundary fallback=|errors| {
+                            view! { <ErrorTemplate errors=errors/> }
+                        }>
+                            {move || {
+                                let current_elections = {
+                                    move || {
+                                        ballot
+                                            .get()
+                                            .map(move |ballot| match ballot {
+                                                Err(e) => {
+                                                    view! { <pre>"Server error: " {e.to_string()}</pre> }
+                                                        .into_view()
+                                                }
+                                                Ok(ballot) => {
+                                                    if ballot.is_empty() {
+                                                        view! { <p>"Not a valid election"</p> }.into_view()
+                                                    } else {
+                                                        let voted_for = ballot
+                                                            .clone()
+                                                            .into_iter()
+                                                            .filter(|i| i.1.is_some())
+                                                            .map(move |(item, position)| {
+                                                                view! {
+                                                                    <ItemView
+                                                                        ballot_items=ballot_items().get().unwrap()
+                                                                        item=item
+                                                                        voted=true
+                                                                        position=position
+                                                                        election_uuid=election_uuid().clone()
+                                                                    />
+                                                                }
+                                                            })
+                                                            .collect_view();
+                                                        let unvoted = ballot
+                                                            .into_iter()
+                                                            .filter(|i| i.1.is_none())
+                                                            .map(move |(item, position)| {
+                                                                view! {
+                                                                    <ItemView
+                                                                        ballot_items=ballot_items().get().unwrap()
+                                                                        item=item
+                                                                        voted=false
+                                                                        position=position
+                                                                        election_uuid=election_uuid().clone()
+                                                                    />
+                                                                }
+                                                            })
+                                                            .collect_view();
+                                                        view! {
+                                                            <div class="">
+                                                                <div>{voted_for}</div>
+                                                                <div class="mt-8 bg-slate-200 p-4 sm:rounded-2xl">
+                                                                    <h3 class="text-2xl text-blue-900">
+                                                                        "Click an option to vote for it"
+                                                                    </h3>
+                                                                    <h4 class="text-xl text-blue-900">
+                                                                        "Then use the arrows to rank"
+                                                                    </h4>
+                                                                    <div>{unvoted}</div>
+                                                                </div>
+                                                            </div>
+                                                        }
+                                                            .into_view()
                                                     }
-                                                })
-                                                .collect_view();
-                                            let unvoted = ballot
-                                                .into_iter()
-                                                .filter(|i| i.1.is_none())
-                                                .map(move |(item, position)| {
-                                                    view! {
-                                                        <ItemView
-                                                            ballot_items=ballot_items().get().unwrap()
-                                                            item=item
-                                                            voted=false
-                                                            position=position
-                                                            election_uuid=election_uuid().clone()
-                                                        />
-                                                    }
-                                                })
-                                                .collect_view();
-                                            view! {
-                                                <div class="">
-                                                    <div>{voted_for}</div>
-                                                    <div class="mt-8 bg-slate-200 p-4 sm:rounded-2xl">
-                                                        <h3 class="text-2xl text-blue-900">
-                                                            "Click an option to vote for it"
-                                                        </h3>
-                                                        <h4 class="text-xl text-blue-900">
-                                                            "Then use the arrows to rank"
-                                                        </h4>
-                                                        <div>{unvoted}</div>
-                                                    </div>
-                                                </div>
-                                            }
-                                                .into_view()
-                                        }
+                                                }
+                                            })
                                     }
-                                })
-                        }
-                    };
-                    view! {
-                        <div class="h-full w-full flex items-center justify-center">
-                            <div class="flex flex-col w-full md:w-1/2 xl:w-1/3 center place-content-center align-content-center">
-                                <div class="w-full">{current_elections}</div>
-                            </div>
-                        </div>
-                    }
-                }}
+                                };
+                                view! { {current_elections} }
+                            }}
 
-            </ErrorBoundary>
-        </Transition>
+                        </ErrorBoundary>
+                    </Transition>
+                </div>
+            </div>
+        </div>
     }
 }
 
@@ -291,6 +371,16 @@ pub fn ElectionVotingView(election: Election) -> impl IntoView {
 }
 
 // Server Functions
+
+#[server(GetWinners)]
+pub async fn get_winners(election_uuid: String) -> Result<(Option<Item>, Option<Item>), ServerFnError> {
+    use leptos_axum::extract;
+    use crate::api::SessionContext;
+
+    let SessionContext(context): SessionContext = extract().await?;
+
+    Ok(Vote::run_elections(&context, &election_uuid))
+}
 
 #[server(GetBallot)]
 pub async fn get_ballot(election_uuid: String) -> Result<Vec<(Item, Option<i32>)>, ServerFnError> {

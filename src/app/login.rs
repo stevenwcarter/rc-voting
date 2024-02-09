@@ -1,11 +1,29 @@
 use leptos::*;
 use leptos_router::*;
+use leptos_use::{use_cookie, utils::FromToStringCodec};
+
+use super::voting::SetSignedIn;
+
+#[component]
+pub fn UnAuthRedirect() -> impl IntoView {
+    let (auth_cookie, _) = use_cookie::<String, FromToStringCodec>("X-Login-Session-ID");
+    let redirect_view = move || auth_cookie.get().is_none().then(|| view! { <Redirect path="/login"/> });
+
+    view! { <div>{redirect_view}</div> }
+}
+#[component]
+pub fn AuthRedirect(path: &'static str) -> impl IntoView {
+    let (auth_cookie, _) = use_cookie::<String, FromToStringCodec>("X-Login-Session-ID");
+    let path = move || path.to_string();
+    let redirect_view = move || auth_cookie.get().is_some().then(|| view! { <Redirect path=path()/> });
+
+    view! { <div>{redirect_view}</div> }
+}
 
 #[component]
 pub fn LoginPage() -> impl IntoView {
-    let login_user = create_server_action::<LoginUser>();
-
     view! {
+        <AuthRedirect path="/"/>
         <div class="bg-gray-100 flex justify-center items-center h-screen">
             // Left: image
             <div class="w-1/2 h-screen hidden lg:block">
@@ -20,45 +38,133 @@ pub fn LoginPage() -> impl IntoView {
                 >
                     {"Sign up instead.."}
                 </A>
-                <ActionForm action=login_user>
-                    <div class="mb-4 mt-4">
-                        <label for="email" class="block text-gray-600">
-                            Email
-                        </label>
-                        <input
-                            type="email"
-                            name="email"
-                            class="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:border-blue-500"
-                            autocomplete="off"
-                        />
-                    </div>
-                    <div class="mb-4">
-                        <label for="password" class="block text-gray-600">
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            name="password"
-                            class="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:border-blue-500"
-                            autocomplete="off"
-                        />
-                    </div>
-                    <input
-                        type="submit"
-                        value="Log in"
-                        class="bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md py-2 px-4 w-full"
-                    />
-                </ActionForm>
+                <LoginForm redirect=true/>
             </div>
         </div>
     }
 }
 
 #[component]
-pub fn SignupPage() -> impl IntoView {
-    let signup_user = create_server_action::<SignupUser>();
+pub fn LoginForm(redirect: bool) -> impl IntoView {
+    let login_action = create_server_action::<LoginUserNoRedirect>();
+    let (redirectView, setRedirectView) = create_signal::<Option<View>>(None);
 
+    create_effect(move |_| {
+        if login_action.value().get().is_some() {
+            if !redirect {
+                let (auth_cookie, _) = use_cookie::<String, FromToStringCodec>("X-Login-Session-ID");
+                if auth_cookie.get().is_some() {
+                    let set_is_signed_in = use_context::<SetSignedIn>();
+                    if let Some(set_signed_in) = set_is_signed_in{
+                        set_signed_in.0.set(true);
+                    }
+                }
+                return;
+            }
+            setRedirectView(Some(view! { <Redirect path="/elections"/> }.into_view()));
+        }
+    });
+
+    if redirectView.get().is_some() {
+        redirectView.get().unwrap()
+    } else {
+        view! {
+            <ActionForm action=login_action>
+                <div class="mb-4 mt-4">
+                    <label for="email" class="block text-gray-600">
+                        Email
+                    </label>
+                    <input
+                        type="email"
+                        name="email"
+                        class="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:border-blue-500"
+                        autocomplete="off"
+                    />
+                </div>
+                <div class="mb-4">
+                    <label for="password" class="block text-gray-600">
+                        Password
+                    </label>
+                    <input
+                        type="password"
+                        name="password"
+                        class="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:border-blue-500"
+                        autocomplete="off"
+                    />
+                </div>
+                <input
+                    type="submit"
+                    value="Log in"
+                    class="bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md py-2 px-4 w-full"
+                />
+            </ActionForm>
+        }
+    }
+}
+
+#[component]
+pub fn SignupForm(redirect: bool) -> impl IntoView {
+    let signup_user = create_server_action::<SignupUserNoRedirect>();
+
+    let (redirectView, setRedirectView) = create_signal::<Option<View>>(None);
+
+    create_effect(move |_| {
+        if signup_user.value().get().is_some() {
+            if !redirect {
+                let (auth_cookie, _) = use_cookie::<String, FromToStringCodec>("X-Login-Session-ID");
+                if auth_cookie.get().is_some() {
+                    let set_is_signed_in = use_context::<SetSignedIn>();
+                    if let Some(set_signed_in) = set_is_signed_in{
+                        set_signed_in.0.set(true);
+                    }
+                }
+                return;
+            }
+            setRedirectView(Some(view! { <Redirect path="/elections"/> }.into_view()));
+        }
+    });
+
+    if redirectView.get().is_some() {
+        redirectView.get().unwrap()
+    } else {
     view! {
+        <ActionForm action=signup_user>
+            <div class="mb-4 mt-4">
+                <label for="email" class="block text-gray-600">
+                    Email
+                </label>
+                <input
+                    type="email"
+                    name="email"
+                    class="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:border-blue-500"
+                    autocomplete="off"
+                />
+            </div>
+            <div class="mb-4">
+                <label for="password" class="block text-gray-600">
+                    Password
+                </label>
+                <input
+                    type="password"
+                    name="password"
+                    class="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:border-blue-500"
+                    autocomplete="off"
+                />
+            </div>
+            <input
+                type="submit"
+                value="Sign up"
+                class="bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md py-2 px-4 w-full"
+            />
+        </ActionForm>
+    }
+    }
+}
+
+#[component]
+pub fn SignupPage() -> impl IntoView {
+    view! {
+        <AuthRedirect path="/"/>
         <div class="bg-gray-100 flex justify-center items-center h-screen">
             // Left: image
             <div class="w-1/2 h-screen hidden lg:block">
@@ -73,35 +179,7 @@ pub fn SignupPage() -> impl IntoView {
                 >
                     {"Log in instead"}
                 </A>
-                <ActionForm action=signup_user>
-                    <div class="mb-4 mt-4">
-                        <label for="email" class="block text-gray-600">
-                            Email
-                        </label>
-                        <input
-                            type="email"
-                            name="email"
-                            class="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:border-blue-500"
-                            autocomplete="off"
-                        />
-                    </div>
-                    <div class="mb-4">
-                        <label for="password" class="block text-gray-600">
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            name="password"
-                            class="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:border-blue-500"
-                            autocomplete="off"
-                        />
-                    </div>
-                    <input
-                        type="submit"
-                        value="Sign up"
-                        class="bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md py-2 px-4 w-full"
-                    />
-                </ActionForm>
+                <SignupForm redirect=true/>
             </div>
         </div>
     }
@@ -111,6 +189,16 @@ pub fn SignupPage() -> impl IntoView {
 
 #[server(SignupUser)]
 async fn signup_user(email: String, password: String) -> Result<(), ServerFnError> {
+    let res = signup_user_no_redirect(email, password).await;
+
+    if res.is_ok() {
+        leptos_axum::redirect("/");
+    }
+
+    Ok(())
+}
+#[server(SignupUserNoRedirect)]
+async fn signup_user_no_redirect(email: String, password: String) -> Result<(), ServerFnError> {
     use crate::context::GraphQLContext;
     use axum::Extension;
     use leptos_axum::extract;
@@ -147,13 +235,26 @@ async fn signup_user(email: String, password: String) -> Result<(), ServerFnErro
 
     if let Ok(session_cookie) = HeaderValue::from_str(&session_cookie.to_string()) {
         response.insert_header(header::SET_COOKIE, session_cookie);
-        leptos_axum::redirect("/elections");
     }
 
     Ok(())
 }
 #[server(LoginUser)]
 async fn login_user(
+    email: String,
+    password: String,
+) -> Result<(), ServerFnError> {
+    let res = login_user_no_redirect(email, password).await;
+
+    if res.is_ok() {
+        leptos_axum::redirect("/");
+    }
+
+    Ok(())
+}
+
+#[server(LoginUserNoRedirect)]
+async fn login_user_no_redirect(
     email: String,
     password: String,
 ) -> Result<(), ServerFnError> {
@@ -193,7 +294,6 @@ async fn login_user(
 
     if let Ok(session_cookie) = HeaderValue::from_str(&session_cookie.to_string()) {
         response.insert_header(header::SET_COOKIE, session_cookie);
-        leptos_axum::redirect("/elections");
     }
 
     Ok(())

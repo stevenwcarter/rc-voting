@@ -1,6 +1,7 @@
 use leptos::*;
 use leptos_icons::*;
 use icondata as i;
+use crate::app::login::UnAuthRedirect;
 use crate::error_template::ErrorTemplate;
 use crate::models::Election;
 use leptos_router::*;
@@ -9,6 +10,7 @@ use super::items::ItemList;
 #[component]
 pub fn Elections() -> impl IntoView {
     view! {
+        <UnAuthRedirect/>
         <div class="flex md:min-h-screen flex-col md:flex-row bg-gradient-to-br from-slate-400 to-slate-200">
             <div class="flex flex-col w-full md:w-1/5 from-slate-400 to-slate-200 md:min-h-screen p-6 bg-gradient-to-tr">
                 <h1 class="text-blue-700 text-3xl">"Your Elections"</h1>

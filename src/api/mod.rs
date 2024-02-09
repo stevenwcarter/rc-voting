@@ -5,7 +5,6 @@ use axum::response::{IntoResponse, Response};
 use axum::{Extension, RequestPartsExt};
 use axum::{async_trait, Json};
 use axum::{http::StatusCode, routing::get, Router};
-use tracing::info;
 use crate::{context::GraphQLContext, models::Session, session::SessionSvc};
 use axum_extra::extract::CookieJar;
 use serde::Serialize;
