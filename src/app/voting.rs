@@ -213,16 +213,15 @@ pub fn ItemView(ballot_items: Result<Vec<(Item, Option<i32>)>, ServerFnError>, i
     }
 }
 
+type WinnersResult = Result<(Option<Item>, Option<Item>), ServerFnError>;
 #[component]
-pub fn Winners(winners: Option<Result<(Option<Item>, Option<Item>), ServerFnError>>) -> impl IntoView {
+pub fn Winners(winners: Option<WinnersResult>) -> impl IntoView {
     let (winner, set_winner) = create_signal::<Option<Item>>(None);
     let (runner_up, set_runner_up) = create_signal::<Option<Item>>(None);
 
-    if let Some(winners) = winners {
-        if let Ok((winner, runner_up)) = winners {
-            set_winner(winner);
-            set_runner_up(runner_up);
-        }
+    if let Some(Ok((winner, runner_up))) = winners {
+        set_winner(winner);
+        set_runner_up(runner_up);
     }
 
     view! {
