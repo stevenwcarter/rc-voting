@@ -1,16 +1,27 @@
 use crate::{
     error_template::ErrorTemplate, models::Item
 };
+use leptos_icons::*;
+use icondata as i;
 use leptos::*;
 use leptos_router::*;
+
+#[derive(Copy, Clone)]
+pub struct DeleteItemContext(Action<DeleteItem, Result<(), ServerFnError>>);
+#[derive(Copy, Clone)]
+pub struct UpdateItemContext(Action<UpdateItem, Result<(), ServerFnError>>);
 
 #[component]
 pub fn ItemList(election_uuid: String) -> impl IntoView {
     let add_item = create_server_action::<AddItem>();
+    let delete_item_action = create_server_action::<DeleteItem>();
+    let update_item_action = create_server_action::<UpdateItem>();
+    logging::log!("Provider is configured");
+    provide_context(DeleteItemContext(delete_item_action));
+    provide_context(UpdateItemContext(update_item_action));
 
     let resource_election_uuid = election_uuid.clone();
-    let items = create_resource(move || add_item.version().get(), move |_| {
-        // set_election_uuid_signal(election_uuid());
+    let items = create_resource(move || (delete_item_action.version().get(), update_item_action.version().get(), add_item.version().get()), move |_| {
         get_items(resource_election_uuid.clone())
     });
 
@@ -55,12 +66,34 @@ pub fn ItemList(election_uuid: String) -> impl IntoView {
 
 #[component]
 pub fn Item(item: Item) -> impl IntoView {
+    let item = Signal::derive(move || item.clone());
+    let delete_action = use_context::<DeleteItemContext>().unwrap().0;
+    let update_action = use_context::<UpdateItemContext>().unwrap().0;
+    let delete_handler = move |_| {
+        delete_action.dispatch(item().into());
+    };
+    let toggle_done_handler = move |_| {
+        let mut new_item = item().clone();
+        new_item.done = !new_item.done;
+
+        update_action.dispatch(new_item.into());
+    };
+
     view! {
-        <div class="grid items-center grid-cols-8 text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white">
+        <div class="flex text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white">
             // <div class="align-middle">{item.uuid}</div>
-            <div class="col-span-2">{item.title}</div>
-            <div class="col-span-6">{item.body}</div>
-        // <div class="align-middle">{item.done}</div>
+            <div class="flex flex-col w-full">
+                <div class="">{item().title}</div>
+                <div class="">{item().body}</div>
+            </div>
+            <div class="col-span-4 flex flex-col">
+                <div class="align-middle" on:click=toggle_done_handler>
+                    {item().done}
+                </div>
+                <div class="align-middle text-3xl" on:click=delete_handler>
+                    <Icon icon=i::BiTrashAltRegular/>
+                </div>
+            </div>
         </div>
     }
 }
@@ -135,9 +168,8 @@ fn ItemForm(add_item: Action<AddItem, Result<Item, ServerFnError>>, election_uui
 
 // Server Functions
 
-#[server(GetItems)]
+#[server]
 pub async fn get_items(election_uuid: String) -> Result<Vec<Item>, ServerFnError> {
-    use crate::models::Item;
     use leptos_axum::extract;
     use crate::api::SessionContext;
 
@@ -146,9 +178,8 @@ pub async fn get_items(election_uuid: String) -> Result<Vec<Item>, ServerFnError
     Ok(Item::list(&context, &election_uuid))
 }
 
-#[server(AddItem)]
+#[server]
 pub async fn add_item(election_uuid: String, title: String, body: String) -> Result<Item, ServerFnError> {
-    use crate::models::Item;
     use leptos_axum::extract;
     use crate::api::SessionContext;
     use log::*;
@@ -159,4 +190,26 @@ pub async fn add_item(election_uuid: String, title: String, body: String) -> Res
     Item::add_new(&context, &election_uuid, &title, &body).map_err(|err| {
         ServerFnError::ServerError(format!("Could not extract method and query... {:?}", err))
     })
+}
+#[server]
+pub async fn update_item(item: Item) -> Result<(), ServerFnError> {
+    use leptos_axum::extract;
+    use crate::api::SessionContext;
+
+    let SessionContext(context): SessionContext = extract().await?;
+
+    item.update(&context);
+
+    Ok(())
+}
+#[server]
+pub async fn delete_item(item: Item) -> Result<(), ServerFnError> {
+    use leptos_axum::extract;
+    use crate::api::SessionContext;
+
+    let SessionContext(context): SessionContext = extract().await?;
+
+    Item::delete(&context, &item.election_uuid, &item.uuid);
+
+    Ok(())
 }

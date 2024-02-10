@@ -8,6 +8,8 @@ use crate::schema::*;
 use anyhow::{Context, Result};
 #[cfg(feature = "ssr")]
 use diesel::prelude::*;
+#[cfg(feature = "ssr")]
+use log::*;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "ssr")]
@@ -189,11 +191,72 @@ pub mod ssr {
 
             Ok(item)
         }
+        pub fn authorized(&self, context: &GraphQLContext) -> bool {
+            let mut conn = context.pool.get().expect("Could not get connection");
+
+            if context.session.is_none() {
+                error!("Not allowed to modify while not authenticated");
+                return false;
+            }
+            let session = context.session.as_ref().unwrap();
+
+            let count: Result<Item, _> = items::table
+                .left_join(elections::table.on(elections::uuid.eq(items::election_uuid)))
+                .filter(elections::owner_uuid.eq(&session.user_uuid))
+                .filter(items::uuid.eq(&self.uuid))
+                .select(Item::as_select())
+                .get_result::<Item>(&mut conn)
+                .context("Could not find item");
+
+            if count.is_err() {
+                return false;
+            }
+            let count = count.unwrap();
+
+            return true;
+        }
+        pub fn update(&self, context: &GraphQLContext) {
+            let mut conn = context.pool.get().expect("Could not get connection");
+
+            if context.session.is_none() {
+                error!("Not allowed to modify while not authenticated");
+                return;
+            }
+            let session = context.session.as_ref().unwrap();
+
+            if !self.authorized(context) {
+                error!("Not allowed to modify an election you don't own");
+                return;
+            }
+
+            diesel::update(items::table)
+                .filter(items::election_uuid.eq(&self.election_uuid))
+                .filter(items::uuid.eq(&self.uuid))
+                .set((
+                    items::title.eq(&self.title),
+                    items::body.eq(&self.body),
+                    items::done.eq(&self.done),
+                ))
+                .execute(&mut conn);
+        }
+        pub fn delete(context: &GraphQLContext, election_uuid: &str, i_uuid: &str) {
+            let mut conn = context.pool.get().expect("Could not get connection");
+
+            let _ = diesel::delete(votes::table)
+                .filter(votes::election_uuid.eq(election_uuid))
+                .filter(votes::item_uuid.eq(i_uuid))
+                .execute(&mut conn)
+                .context("could not delete item");
+            let _ = diesel::delete(items::table)
+                .filter(items::election_uuid.eq(election_uuid))
+                .filter(items::uuid.eq(i_uuid))
+                .execute(&mut conn)
+                .context("could not delete item");
+        }
         pub fn list(context: &GraphQLContext, election_uuid: &str) -> Vec<Item> {
             let mut conn = context.pool.get().expect("Could not get connection");
 
             all_items
-                .filter(crate::schema::items::done.eq(false))
                 .filter(items::election_uuid.eq(election_uuid))
                 .load::<Item>(&mut conn)
                 .unwrap()
@@ -350,7 +413,7 @@ pub struct Session {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "ssr", derive(Queryable, Insertable))]
+#[cfg_attr(feature = "ssr", derive(Queryable, Insertable, Selectable))]
 pub struct Item {
     pub uuid: String,
     pub election_uuid: String,
