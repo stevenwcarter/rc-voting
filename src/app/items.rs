@@ -81,18 +81,39 @@ pub fn Item(item: Item) -> impl IntoView {
 
     view! {
         <div class="flex text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white">
-            // <div class="align-middle">{item.uuid}</div>
             <div class="flex flex-col w-full">
                 <div class="">{item().title}</div>
                 <div class="">{item().body}</div>
             </div>
             <div class="col-span-4 flex flex-col">
-                <div class="align-middle" on:click=toggle_done_handler>
-                    {item().done}
-                </div>
-                <div class="align-middle text-3xl" on:click=delete_handler>
+                <button
+                    class="align-middle text-3xl"
+                    on:click=toggle_done_handler
+                    title="toggle 'done' status"
+                >
+                    <Show
+                        when=move || item().done
+                        fallback=|| {
+                            view! {
+                                <div class="text-gray-700">
+                                    <Icon icon=i::TbCircleCheck/>
+                                </div>
+                            }
+                        }
+                    >
+
+                        <div class="text-green-500">
+                            <Icon icon=i::TbCircleCheckFilled/>
+                        </div>
+                    </Show>
+                </button>
+                <button
+                    class="align-middle text-3xl text-red-500"
+                    on:click=delete_handler
+                    title="delete this item"
+                >
                     <Icon icon=i::BiTrashAltRegular/>
-                </div>
+                </button>
             </div>
         </div>
     }
