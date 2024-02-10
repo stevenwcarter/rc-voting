@@ -17,7 +17,7 @@ pub fn Voting() -> impl IntoView {
     let (auth_cookie, _) = use_cookie::<String, FromToStringCodec>("X-Login-Session-ID");
     let (is_signed_in, set_is_signed_in) = create_signal(auth_cookie.get().is_some());
     provide_context(SetSignedIn(set_is_signed_in));
-    let (sign_in, set_sign_in) = create_signal::<bool>(false);
+
     let params = use_params::<ElectionItemParams>();
     let election_uuid = move || {
         params.with(|params| {
@@ -27,41 +27,10 @@ pub fn Voting() -> impl IntoView {
                 .unwrap_or_default()
         })
     };
+
     view! {
-        <div class="flex min-h-screen min-w-full bg-gradient-to-b from-slate-400 to-slate-200">
-            <Show
-                when=move || { is_signed_in() }
-                fallback=move || {
-                    view! {
-                        <div class="h-screen min-w-full flex flex-col items-center align-center justify-center">
-                            <div class="text-2xl text-blue-600">
-                                "Sign in or sign up to participate"
-                            </div>
-                            <button
-                                class="bg-blue-500 rounded-lg text-white p-3 m-2"
-                                on:click=move |_| {
-                                    set_sign_in.update(|sign_in| *sign_in = !*sign_in)
-                                }
-                            >
-
-                                <Show when=move || { sign_in() } fallback=|| { "Sign up instead" }>
-                                    "Log in instead"
-                                </Show>
-                            </button>
-                            <Show
-                                when=move || { sign_in() }
-                                fallback=|| {
-                                    view! { <LoginForm redirect=false/> }
-                                }
-                            >
-
-                                <SignupForm redirect=false/>
-                            </Show>
-                        </div>
-                    }
-                }
-            >
-
+        <div class="flex min-h-screen min-w-full bg-gradient-to-b from-slate-400 to-slate-200 p-16">
+            <Show when=move || { is_signed_in() } fallback=|| view! { <InlineLogin/> }>
                 <div class="min-w-full">
                     <A href="/elections">
                         <div class="flex gap-2 border border-solid border-blue-500 rounded-full text-blue-800 text-xl flex-nowrap absolute left-2 top-2 py-3 px-4 items-center bg-slate-200">
@@ -71,6 +40,33 @@ pub fn Voting() -> impl IntoView {
                     </A>
                     <VotingInterface election_uuid=election_uuid()/>
                 </div>
+            </Show>
+        </div>
+    }
+}
+
+#[component]
+pub fn InlineLogin() -> impl IntoView {
+    let (sign_in, set_sign_in) = create_signal::<bool>(false);
+    let toggle_signed_in = move |_| {
+        set_sign_in.update(|sign_in| *sign_in = !*sign_in)
+    };
+    view! {
+        <div class="h-screen min-w-full flex flex-col items-center align-center justify-center">
+            <div class="text-2xl text-blue-600">"Sign in or sign up to participate"</div>
+            <button class="bg-blue-500 rounded-lg text-white p-3 m-2" on:click=toggle_signed_in>
+                <Show when=move || { sign_in() } fallback=|| { "Sign up instead" }>
+                    "Log in instead"
+                </Show>
+            </button>
+            <Show
+                when=move || { sign_in() }
+                fallback=|| {
+                    view! { <LoginForm redirect=false/> }
+                }
+            >
+
+                <SignupForm redirect=false/>
             </Show>
         </div>
     }
