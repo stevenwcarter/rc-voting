@@ -13,7 +13,7 @@ pub fn Elections() -> impl IntoView {
         <UnAuthRedirect/>
         <div class="flex md:min-h-screen flex-col md:flex-row bg-gradient-to-br from-slate-400 to-slate-200">
             <div class="flex flex-col w-full md:w-1/5 from-slate-400 to-slate-200 md:min-h-screen p-6 bg-gradient-to-tr">
-                <h1 class="text-blue-700 text-3xl">"Your Elections"</h1>
+                <h1 class="text-veniceblue-700 text-3xl">"Your Elections"</h1>
                 <ElectionList/>
             </div>
             <div class="flex flex-col md:w-4/5 w-full bg-gradient-to-br from-slate-400 to-slate-200">
@@ -96,7 +96,7 @@ fn AddElectionForm(add_election: Action<AddElection, Result<Election, ServerFnEr
     view! {
         <label>
             <input class="peer/showLabel absolute scale-0" type="checkbox"/>
-            <span class="block max-h-14 max-w-xs overflow-hidden rounded-lg bg-slate-100 px-4 py-0 text-blue-400 hover:text-blue-500 shadow-lg transition-all duration-300 peer-checked/showLabel:max-h-60">
+            <span class="block max-h-14 max-w-xs overflow-hidden rounded-lg bg-slate-100 px-4 py-0 text-veniceblue-400 hover:text-veniceblue-500 shadow-lg transition-all duration-300 peer-checked/showLabel:max-h-60">
                 <h3 class="flex h-14 cursor-pointer items-center font-bold">
                     "Create new election"
                 </h3>
@@ -116,14 +116,14 @@ fn AddElectionForm(add_election: Action<AddElection, Result<Election, ServerFnEr
                                         }
 
                                         prop:value=name
-                                        class="bg-white block flex-1 border border-blue-500 border-solid py-1.5 pl-1 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm w-full"
+                                        class="bg-white block flex-1 border border-veniceblue-500 border-solid py-1.5 pl-1 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm w-full"
                                     />
                                 </div>
                             </div>
                             <input
                                 type="submit"
                                 value="Create election"
-                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-2 mb-4"
+                                class="bg-veniceblue-500 hover:bg-veniceblue-700 text-white font-bold py-2 px-4 rounded mt-2 mb-4"
                             />
                         </div>
                     </ActionForm>
@@ -185,8 +185,8 @@ pub fn ElectionList() -> impl IntoView {
 pub fn ElectionView(election: Election) -> impl IntoView {
     view! {
         <A href=format!("/elections/{}", election.uuid)>
-            <div class="text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white">
-                <div class="flex flex-row text-xl text-blue-700 hover:text-blue-900 font-semibold">
+            <div class="text-left border border-veniceblue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white">
+                <div class="flex flex-row text-xl text-veniceblue-700 hover:text-veniceblue-900 font-semibold">
                     <div>{election.name}</div>
                 </div>
             </div>
@@ -199,10 +199,10 @@ pub fn ElectionVotingView(election: Election) -> impl IntoView {
     view! {
         <div class="p-6 m-3 rounded-lg bg-slate-100">
             <div class="flex flex-row justify-between w-full">
-                <h2 class="text-2xl text-blue-500">{election.name}</h2>
-                <div class="text-xl text-blue-700">
+                <h2 class="text-2xl text-veniceblue-500">{election.name}</h2>
+                <div class="text-xl text-veniceblue-700">
                     <A href=format!("/voting/{}", election.uuid)>
-                        <div class="flex border border-solid border-blue-500 rounded-full p-3 gap-2 items-center">
+                        <div class="flex border border-solid border-veniceblue-500 rounded-full p-3 gap-2 items-center">
                             "Vote " <Icon icon=i::FaRightLongSolid/>
                         </div>
                     </A>

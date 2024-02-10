@@ -29,11 +29,11 @@ pub fn Voting() -> impl IntoView {
     };
 
     view! {
-        <div class="flex min-h-screen min-w-full bg-gradient-to-b from-slate-400 to-slate-200 p-16">
+        <div class="flex min-h-screen min-w-full bg-gradient-to-b from-slate-200 to-slate-400 p-16">
             <Show when=move || { is_signed_in() } fallback=|| view! { <InlineLogin/> }>
                 <div class="min-w-full">
                     <A href="/elections">
-                        <div class="flex gap-2 border border-solid border-blue-500 rounded-full text-blue-800 text-xl flex-nowrap absolute left-2 top-2 py-3 px-4 items-center bg-slate-200">
+                        <div class="bg-white flex gap-2 border border-solid border-blue-500 rounded-full text-blue-800 text-xl flex-nowrap absolute left-2 top-2 py-3 px-4 items-center">
                             <Icon icon=i::FaLeftLongSolid/>
                             "Your elections"
                         </div>
@@ -79,89 +79,86 @@ pub fn ItemView(ballot_items: Result<Vec<(Item, Option<i32>)>, ServerFnError>, i
     let save_ballot_action = use_context::<SaveBallotAction>().unwrap().0;
 
     let up_item = item.clone();
-    let up_ballot_items = ballot_items.clone();
     let down_item = item.clone();
-    let down_ballot_items = ballot_items.clone();
     let add_ballot_items = ballot_items.clone();
     let remove_item = item.clone();
     let remove_ballot_items = ballot_items.clone();
 
     let vote_check = ballot_items.clone();
-    let voted_items: Vec<(Item, Option<i32>)> = if let Ok(vote_check) = vote_check {
-        vote_check.iter().filter(|(_, i)| i.is_some()).cloned().collect()
+    let get_voted_items = move || {
+    if let Ok(vote_check) = vote_check.clone() {
+        vote_check.iter().filter(|(_, i)| i.is_some()).cloned().collect::<Vec<(Item, Option<i32>)>>()
     } else {
         Vec::new()
+    }
     };
+    let up_get_voted_items = get_voted_items.clone();
+    let down_get_voted_items = get_voted_items.clone();
+    let rm_get_voted_items = get_voted_items.clone();
+    let add_get_voted_items = get_voted_items.clone();
+
+    let voted_items: Vec<(Item, Option<i32>)> = get_voted_items();
 
     let move_up_click_handler = move |_|{
         if !voted { return; }
 
-        if let Ok(ballot_items) = up_ballot_items.clone() {
-            let mut votes: Vec<String> = ballot_items.iter().filter(|(_, i)| i.is_some()).map(|(item, _)| item.uuid.clone()).collect();
-            let index_to_move = votes.iter().position(|v| *v == up_item.uuid.clone());
-            if let Some(index_to_move) = index_to_move {
-                if index_to_move == 0 { return; }
-                votes.swap(index_to_move, index_to_move - 1);
+        let mut votes: Vec<String> = up_get_voted_items().iter().map(|(item, _)| item.uuid.clone()).collect();
+        let index_to_move = votes.iter().position(|v| *v == up_item.uuid.clone());
+        if let Some(index_to_move) = index_to_move {
+            if index_to_move == 0 { return; }
+            votes.swap(index_to_move, index_to_move - 1);
 
-                let new_ballot = Ballot {
-                    election_uuid: election_uuid().clone(),
-                    votes,
-                };
+            let new_ballot = Ballot {
+                election_uuid: election_uuid().clone(),
+                votes,
+            };
 
-                save_ballot_action.dispatch(new_ballot.into());
-            }
+            save_ballot_action.dispatch(new_ballot.into());
         }
     };
     let move_down_click_handler = move |_|{
         if !voted { return; }
 
-        if let Ok(ballot_items) = down_ballot_items.clone() {
-            let mut votes: Vec<String> = ballot_items.iter().filter(|(_, i)| i.is_some()).map(|(item, _)| item.uuid.clone()).collect();
-            let index_to_move = votes.iter().position(|v| *v == down_item.uuid.clone());
-            if let Some(index_to_move) = index_to_move {
-                if index_to_move == votes.len() - 1 { return; }
-                votes.swap(index_to_move, index_to_move + 1);
+        let mut votes: Vec<String> = down_get_voted_items().iter().map(|(item, _)| item.uuid.clone()).collect();
+        let index_to_move = votes.iter().position(|v| *v == down_item.uuid.clone());
+        if let Some(index_to_move) = index_to_move {
+            if index_to_move == votes.len() - 1 { return; }
+            votes.swap(index_to_move, index_to_move + 1);
 
-                let new_ballot = Ballot {
-                    election_uuid: election_uuid().clone(),
-                    votes,
-                };
+            let new_ballot = Ballot {
+                election_uuid: election_uuid().clone(),
+                votes,
+            };
 
-                save_ballot_action.dispatch(new_ballot.into());
-            }
+            save_ballot_action.dispatch(new_ballot.into());
         }
     };
     let remove_from_voting_click_handler = move |_| {
         if !voted { return; }
-        if let Ok(ballot_items) = remove_ballot_items.clone() {
-            let votes: Vec<String> = ballot_items
-                .iter()
-                .filter(|(_, i)| i.is_some())
-                .map(|(item, _)| item.uuid.clone())
-                .filter(|v| *v != remove_item.uuid.clone())
-                .collect();
+        let votes: Vec<String> = rm_get_voted_items() 
+            .iter()
+            .map(|(item, _)| item.uuid.clone())
+            .filter(|v| *v != remove_item.uuid.clone())
+            .collect();
 
-            let new_ballot = Ballot {
-                election_uuid: election_uuid().clone(),
-                votes,
-            };
+        let new_ballot = Ballot {
+            election_uuid: election_uuid().clone(),
+            votes,
+        };
 
-            save_ballot_action.dispatch(new_ballot.into());
-        }
+        save_ballot_action.dispatch(new_ballot.into());
     };
     let add_to_voting_click_handler = move |_| {
         if voted { return; }
-        if let Ok(ballot_items) = add_ballot_items.clone() {
-            let mut votes: Vec<String> = ballot_items.iter().filter(|(_, i)| i.is_some()).map(|(item, _)| item.uuid.clone()).collect();
-            votes.push(handler_item.uuid.clone());
+        let mut votes: Vec<String> = add_get_voted_items().iter().map(|(item, _)| item.uuid.clone()).collect();
+        votes.push(handler_item.uuid.clone());
 
-            let new_ballot = Ballot {
-                election_uuid: election_uuid().clone(),
-                votes,
-            };
+        let new_ballot = Ballot {
+            election_uuid: election_uuid().clone(),
+            votes,
+        };
 
-            save_ballot_action.dispatch(new_ballot.into());
-        }
+        save_ballot_action.dispatch(new_ballot.into());
     };
 
     view! {
@@ -226,13 +223,13 @@ pub fn ItemView(ballot_items: Result<Vec<(Item, Option<i32>)>, ServerFnError>, i
     }
 }
 
-type WinnersResult = Result<(Option<Item>, Option<Item>), ServerFnError>;
 #[component]
-pub fn Winners(winners: Option<WinnersResult>) -> impl IntoView {
+pub fn Winners() -> impl IntoView {
+    let winners = use_context::<WinnersContext>().unwrap().0;
     let (winner, set_winner) = create_signal::<Option<Item>>(None);
     let (runner_up, set_runner_up) = create_signal::<Option<Item>>(None);
 
-    if let Some(Ok((winner, runner_up))) = winners {
+    if let Some(Ok((winner, runner_up))) = winners.get() {
         set_winner(winner);
         set_runner_up(runner_up);
     }
@@ -243,13 +240,13 @@ pub fn Winners(winners: Option<WinnersResult>) -> impl IntoView {
             <div class="flex flex-row gap-4 w-full justify-center items-center">
                 <Show when=move || winner.get().is_some() fallback=|| "No winners yet">
                     <div class="text-xl">"Winner"</div>
-                    <div class="text-2xl">{winner.get().unwrap().title}</div>
+                    <div class="text-2xl">{move || winner.get().unwrap().title}</div>
                 </Show>
             </div>
             <div class="flex flex-row gap-4 w-full justify-center items-center">
                 <Show when=move || runner_up.get().is_some() fallback=|| "">
                     <div class="text-xl">"Runner up"</div>
-                    <div class="text-2xl">{runner_up.get().unwrap().title}</div>
+                    <div class="text-2xl">{move || runner_up.get().unwrap().title}</div>
                 </Show>
             </div>
         </div>
@@ -259,6 +256,9 @@ pub fn Winners(winners: Option<WinnersResult>) -> impl IntoView {
 #[derive(Copy, Clone)]
 struct SaveBallotAction(Action<SaveBallot, Result<(), ServerFnError>>);
 
+#[derive(Copy, Clone)]
+struct WinnersContext(Resource<usize, Result<(Option<Item>, Option<Item>), ServerFnError>>);
+
 #[component]
 pub fn VotingInterface(election_uuid: String) -> impl IntoView {
     let (election_uuid, _) = create_signal(election_uuid.clone());
@@ -267,23 +267,21 @@ pub fn VotingInterface(election_uuid: String) -> impl IntoView {
 
     let ballot = create_resource(save_ballot_action.version(), move |_| get_ballot(election_uuid().clone()));
     let winners = create_resource(save_ballot_action.version(), move |_| get_winners(election_uuid().clone()));
+    provide_context(WinnersContext(winners));
 
     let closure_ballot = ballot;
-    let ballot_items = move || { closure_ballot };
+    let ballot_items = move || { closure_ballot.clone() };
 
     view! {
         <div class="h-full w-full flex items-center justify-center">
             <div class="flex flex-col w-full md:w-1/2 xl:w-1/3 center place-content-center align-content-center">
                 <div class="w-full">
                     <Transition fallback=move || view! { <p>"Loading..."</p> }>
-                        <ErrorBoundary fallback=|errors| {
-                            view! { <ErrorTemplate errors=errors/> }
-                        }>
-                            <Winners winners=winners.get()/>
-                        </ErrorBoundary>
+                        <Winners/>
                     </Transition>
                     <Transition fallback=move || view! { <p>"Loading..."</p> }>
                         <ErrorBoundary fallback=|errors| {
+                            logging::log!("Errors: {:?}", errors);
                             view! { <ErrorTemplate errors=errors/> }
                         }>
                             {move || {
