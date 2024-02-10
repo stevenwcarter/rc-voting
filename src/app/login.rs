@@ -46,7 +46,7 @@ pub fn LoginPage() -> impl IntoView {
 
 #[component]
 pub fn LoginForm(redirect: bool) -> impl IntoView {
-    let login_action = create_server_action::<LoginUserNoRedirect>();
+    let login_action = create_server_action::<LoginUser>();
     let (redirectView, setRedirectView) = create_signal::<Option<View>>(None);
 
     create_effect(move |_| {
@@ -61,50 +61,47 @@ pub fn LoginForm(redirect: bool) -> impl IntoView {
                 }
                 return;
             }
-            setRedirectView(Some(view! { <Redirect path="/elections"/> }.into_view()));
+            setRedirectView(Some(view! { <Redirect path="/elections"/> }));
         }
     });
 
-    if redirectView.get().is_some() {
-        redirectView.get().unwrap()
-    } else {
-        view! {
-            <ActionForm action=login_action>
-                <div class="mb-4 mt-4">
-                    <label for="email" class="block text-gray-600">
-                        Email
-                    </label>
-                    <input
-                        type="email"
-                        name="email"
-                        class="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:border-blue-500"
-                        autocomplete="off"
-                    />
-                </div>
-                <div class="mb-4">
-                    <label for="password" class="block text-gray-600">
-                        Password
-                    </label>
-                    <input
-                        type="password"
-                        name="password"
-                        class="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:border-blue-500"
-                        autocomplete="off"
-                    />
-                </div>
+    view! {
+        {redirectView}
+        <ActionForm action=login_action>
+            <div class="mb-4 mt-4">
+                <label for="email" class="block text-gray-600">
+                    Email
+                </label>
                 <input
-                    type="submit"
-                    value="Log in"
-                    class="bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md py-2 px-4 w-full"
+                    type="email"
+                    name="email"
+                    class="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:border-blue-500"
+                    autocomplete="off"
                 />
-            </ActionForm>
-        }
+            </div>
+            <div class="mb-4">
+                <label for="password" class="block text-gray-600">
+                    Password
+                </label>
+                <input
+                    type="password"
+                    name="password"
+                    class="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:border-blue-500"
+                    autocomplete="off"
+                />
+            </div>
+            <input
+                type="submit"
+                value="Log in"
+                class="bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md py-2 px-4 w-full"
+            />
+        </ActionForm>
     }
 }
 
 #[component]
 pub fn SignupForm(redirect: bool) -> impl IntoView {
-    let signup_user = create_server_action::<SignupUserNoRedirect>();
+    let signup_user = create_server_action::<SignupUser>();
 
     let (redirectView, setRedirectView) = create_signal::<Option<View>>(None);
 
@@ -120,14 +117,12 @@ pub fn SignupForm(redirect: bool) -> impl IntoView {
                 }
                 return;
             }
-            setRedirectView(Some(view! { <Redirect path="/elections"/> }.into_view()));
+            setRedirectView(Some(view! { <Redirect path="/elections"/> }));
         }
     });
 
-    if redirectView.get().is_some() {
-        redirectView.get().unwrap()
-    } else {
     view! {
+        {redirectView}
         <ActionForm action=signup_user>
             <div class="mb-4 mt-4">
                 <label for="email" class="block text-gray-600">
@@ -158,7 +153,6 @@ pub fn SignupForm(redirect: bool) -> impl IntoView {
             />
         </ActionForm>
     }
-    }
 }
 
 #[component]
@@ -187,18 +181,8 @@ pub fn SignupPage() -> impl IntoView {
 
 // Server Functions
 
-#[server(SignupUser)]
+#[server]
 async fn signup_user(email: String, password: String) -> Result<(), ServerFnError> {
-    let res = signup_user_no_redirect(email, password).await;
-
-    if res.is_ok() {
-        leptos_axum::redirect("/");
-    }
-
-    Ok(())
-}
-#[server(SignupUserNoRedirect)]
-async fn signup_user_no_redirect(email: String, password: String) -> Result<(), ServerFnError> {
     use crate::context::GraphQLContext;
     use axum::Extension;
     use leptos_axum::extract;
@@ -239,22 +223,9 @@ async fn signup_user_no_redirect(email: String, password: String) -> Result<(), 
 
     Ok(())
 }
-#[server(LoginUser)]
+
+#[server]
 async fn login_user(
-    email: String,
-    password: String,
-) -> Result<(), ServerFnError> {
-    let res = login_user_no_redirect(email, password).await;
-
-    if res.is_ok() {
-        leptos_axum::redirect("/");
-    }
-
-    Ok(())
-}
-
-#[server(LoginUserNoRedirect)]
-async fn login_user_no_redirect(
     email: String,
     password: String,
 ) -> Result<(), ServerFnError> {

@@ -272,7 +272,7 @@ pub fn VotingInterface() -> impl IntoView {
     provide_context(SaveBallotAction(save_ballot_action));
 
     let ballot = create_resource(save_ballot_action.version(), move |_| get_ballot(election_uuid().clone()));
-    let winners = create_resource(save_ballot_action.version(), move |_| get_winners(election_uuid().clone()));
+    let winners = create_resource(save_ballot_action.version(), move |_| run_elections(election_uuid().clone()));
     let ballot_exists = move || ballot.get().is_some();
     let unwrapped_ballot = Signal::derive(move || ballot.get().unwrap().unwrap_or(Vec::new()));
     provide_context(WinnersContext(winners));
@@ -352,7 +352,7 @@ pub fn ElectionVotingView(election: Election) -> impl IntoView {
 
 // Server Functions
 
-#[server(GetWinners)]
+#[server]
 pub async fn get_winners(election_uuid: String) -> Result<(Option<Item>, Option<Item>), ServerFnError> {
     use leptos_axum::extract;
     use crate::api::SessionContext;
@@ -362,7 +362,7 @@ pub async fn get_winners(election_uuid: String) -> Result<(Option<Item>, Option<
     Ok(Vote::run_elections(&context, &election_uuid))
 }
 
-#[server(GetBallot)]
+#[server]
 pub async fn get_ballot(election_uuid: String) -> Result<Vec<(Item, Option<i32>)>, ServerFnError> {
     use leptos_axum::extract;
     use crate::api::SessionContext;
@@ -373,7 +373,7 @@ pub async fn get_ballot(election_uuid: String) -> Result<Vec<(Item, Option<i32>)
     Ok(Item::for_user(&context, &session.user_uuid, &election_uuid))
 }
 
-#[server(SaveBallot)]
+#[server]
 pub async fn save_ballot(ballot: Ballot) -> Result<(), ServerFnError> {
     use leptos_axum::extract;
     use crate::api::SessionContext;
@@ -385,22 +385,12 @@ pub async fn save_ballot(ballot: Ballot) -> Result<(), ServerFnError> {
     Ok(())
 }
 
-#[server(RunElection)]
-pub async fn run_election(election_uuid: String) -> Result<Option<Item>, ServerFnError> {
+#[server]
+pub async fn run_elections(election_uuid: String) -> Result<(Option<Item>, Option<Item>), ServerFnError> {
     use leptos_axum::extract;
     use crate::api::SessionContext;
 
     let SessionContext(context): SessionContext = extract().await?;
 
-    Ok(Vote::run_election(&context, &election_uuid))
-}
-
-#[server(RunSecondElection)]
-pub async fn run_second_election(election_uuid: String, winner: Item) -> Result<Option<Item>, ServerFnError> {
-    use leptos_axum::extract;
-    use crate::api::SessionContext;
-
-    let SessionContext(context): SessionContext = extract().await?;
-
-    Ok(Vote::run_second_election(&context, &election_uuid, &Some(winner)))
+    Ok(Vote::run_elections(&context, &election_uuid))
 }

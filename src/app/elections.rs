@@ -215,7 +215,7 @@ pub fn ElectionVotingView(election: Election) -> impl IntoView {
 
 // Server Functions
 
-#[server(GetElections)]
+#[server]
 pub async fn get_elections() -> Result<Vec<Election>, ServerFnError> {
     use crate::models::Election;
     use leptos_axum::extract;
@@ -226,7 +226,7 @@ pub async fn get_elections() -> Result<Vec<Election>, ServerFnError> {
     Election::list(&context).map_err(|e| ServerFnError::ServerError(format!("Could not get list of elections: {}", e)))
 }
 
-#[server(LoadElection)]
+#[server]
 pub async fn load_election(uuid: String) -> Result<Election, ServerFnError> {
     use crate::models::Election;
     use leptos_axum::extract;
@@ -239,7 +239,7 @@ pub async fn load_election(uuid: String) -> Result<Election, ServerFnError> {
     })
 }
 
-#[server(AddElection)]
+#[server]
 pub async fn add_election(name: String) -> Result<Election, ServerFnError> {
     use crate::models::Election;
     use leptos_axum::extract;
