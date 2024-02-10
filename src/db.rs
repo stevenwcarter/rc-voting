@@ -3,7 +3,6 @@ use std::error::Error;
 use diesel::dsl::sql_query;
 use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
-use diesel::r2d2::CustomizeConnection;
 use diesel::r2d2::Pool;
 use diesel::sqlite::SqliteConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
@@ -22,7 +21,7 @@ impl diesel::r2d2::CustomizeConnection<SqliteConnection, diesel::r2d2::Error>
     fn on_acquire(&self, conn: &mut SqliteConnection) -> Result<(), diesel::r2d2::Error> {
         (|| {
             if let Some(d) = self.busy_timeout {
-                sql_query(&format!("PRAGMA busy_timeout = {};", d.as_millis())).execute(conn)?;
+                sql_query(format!("PRAGMA busy_timeout = {};", d.as_millis())).execute(conn)?;
             }
             Ok(())
         })()
