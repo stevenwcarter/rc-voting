@@ -81,7 +81,8 @@ pub fn InlineLogin() -> impl IntoView {
 }
 
 #[component]
-pub fn ItemView(ballot_items: Signal<Vec<(Item, Option<i32>)>>, item: Item, voted: bool, position: Option<i32>) -> impl IntoView {
+pub fn ItemView(ballot_items: Vec<(Item, Option<i32>)>, item: Item, voted: bool, position: Option<i32>) -> impl IntoView {
+    let ballot_items = Signal::derive(move || ballot_items.clone());
     let election_uuid = use_context::<ElectionUuidContext>().unwrap().0;
     let handler_item = item.clone();
     let save_ballot_action = use_context::<SaveBallotAction>().unwrap().0;
@@ -274,7 +275,6 @@ pub fn VotingInterface() -> impl IntoView {
     let ballot = create_resource(save_ballot_action.version(), move |_| get_ballot(election_uuid().clone()));
     let winners = create_resource(save_ballot_action.version(), move |_| run_elections(election_uuid().clone()));
     let ballot_exists = move || ballot.get().is_some();
-    let unwrapped_ballot = Signal::derive(move || ballot.get().unwrap().unwrap_or(Vec::new()));
     provide_context(WinnersContext(winners));
 
     view! {
@@ -289,7 +289,7 @@ pub fn VotingInterface() -> impl IntoView {
                     }>
 
                         <Show when=ballot_exists>
-                            <BallotInterface ballot=unwrapped_ballot/>
+                            <BallotInterface ballot=ballot.get().unwrap().unwrap()/>
                         </Show>
 
                     </Transition>
@@ -300,20 +300,20 @@ pub fn VotingInterface() -> impl IntoView {
 }
 
 #[component]
-pub fn BallotInterface(ballot: Signal<Vec<(Item, Option<i32>)>>) -> impl IntoView {
+pub fn BallotInterface(ballot: Vec<(Item, Option<i32>)>) -> impl IntoView {
+    let ballot = Signal::derive(move || ballot.clone());
     let voted_for = move || ballot()
-        .clone()
         .into_iter()
         .filter(|i| i.1.is_some())
         .map(move |(item, position)| {
-            view! { <ItemView ballot_items=ballot item=item voted=true position=position/> }
+            view! { <ItemView ballot_items=ballot() item=item voted=true position=position/> }
         })
         .collect_view();
     let unvoted = move || ballot()
         .into_iter()
         .filter(|i| i.1.is_none())
         .map(move |(item, position)| {
-            view! { <ItemView ballot_items=ballot item=item voted=false position=position/> }
+            view! { <ItemView ballot_items=ballot() item=item voted=false position=position/> }
         })
         .collect_view();
 
