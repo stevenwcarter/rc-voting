@@ -97,7 +97,7 @@ pub fn Item(item: Item) -> impl IntoView {
     };
 
     view! {
-        <div class="flex text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white">
+        <div class="flex text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white dark:bg-gray-900 dark:text-white">
 
             <div class="flex flex-col space-around m-3">
                 <button
@@ -107,7 +107,7 @@ pub fn Item(item: Item) -> impl IntoView {
                     <Icon icon=i::BsPencilSquare/>
                 </button>
             </div>
-            <div class="flex flex-col w-full px-4">
+            <div class="flex flex-col w-full px-4 dark:bg-gray-900 dark:text-white">
                 <Show
                     when=is_editing
                     fallback=move || {
@@ -121,11 +121,13 @@ pub fn Item(item: Item) -> impl IntoView {
                     <input
                         type="text"
                         name="title"
+                        class="block w-full rounded-md border border-blue-500 border-solid py-1.5 text-gray-900 dark:text-gray-100 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 dark:bg-gray-900"
                         prop:value=title
                         on:input=move |e| set_title(event_target_value(&e))
                     />
                     <textarea
                         name="body"
+                        class="block w-full rounded-md border border-blue-500 border-solid py-1.5 text-gray-900 dark:text-gray-100 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 dark:bg-gray-900"
                         prop:value=body
                         on:input=move |e| set_body(event_target_value(&e))
                     ></textarea>
@@ -193,7 +195,7 @@ fn ItemForm(add_item: Action<AddItem, Result<Item, ServerFnError>>, election_uui
     view! {
         <ActionForm action=add_item>
             <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-                <div class="col-span-full">
+                <div class="col-span-full dark:text-white">
                     <input type="hidden" name="election_uuid" value=election_uuid/>
                     <label for="title">"Add a short summary"</label>
                     <div class="mt-2">
@@ -206,16 +208,16 @@ fn ItemForm(add_item: Action<AddItem, Result<Item, ServerFnError>>, election_uui
                             }
 
                             prop:value=title
-                            class="block flex-1 border border-blue-500 border-solid bg-white py-1.5 pl-1 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm w-full"
+                            class="block flex-1 border border-blue-500 border-solid bg-white dark:bg-gray-800 dark:text-white py-1.5 pl-1 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm w-full"
                         />
                     </div>
                 </div>
-                <div class="col-span-full">
+                <div class="col-span-full dark:text-white">
                     <label for="body">"Describe your vote option"</label>
                     <div class="mt-2">
                         <textarea
                             name="body"
-                            class="block w-full rounded-md border border-blue-500 border-solid py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                            class="block w-full rounded-md border border-blue-500 border-solid py-1.5 text-gray-900 dark:text-gray-100 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 dark:bg-gray-900"
                             rows="3"
                             on:input=move |ev| {
                                 set_body(event_target_value(&ev));

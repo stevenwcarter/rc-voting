@@ -7,6 +7,7 @@ use crate::{
     error_template::{AppError, ErrorTemplate},
 };
 use leptos::*;
+use leptos_darkmode::Darkmode;
 use leptos_meta::*;
 use leptos_router::*;
 
@@ -19,10 +20,15 @@ pub mod voting;
 pub fn App() -> impl IntoView {
     provide_meta_context();
 
+    let darkmode = Darkmode::init();
     view! {
         <Stylesheet id="leptos" href="/pkg/rc-voting-leptos.css"/>
 
         <Title text="Ranked Choice Voting"/>
+
+        <Html lang="en" class=move || if darkmode.is_dark() { "dark" } else { "" }/>
+
+        <Body class="bg-white dark:bg-gray-700"/>
 
         <Router fallback=|| {
             let mut outside_errors = Errors::default();

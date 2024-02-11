@@ -26,6 +26,7 @@ juniper = { git = "https://github.com/graphql-rust/juniper", features = ["chrono
 juniper_axum = { git = "https://github.com/graphql-rust/juniper", features = ["subscriptions"], optional = true }
 leptos = { version = "0.6", features = ["nightly"] }
 leptos_axum = { version = "0.6", optional = true }
+leptos_darkmode = "0.2"
 leptos_meta = { version = "0.6", features = ["nightly"] }
 leptos_router = { version = "0.6", features = ["nightly"] }
 log = { version = "0.4", optional = true}
