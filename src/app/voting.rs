@@ -279,7 +279,7 @@ pub fn VotingInterface() -> impl IntoView {
 
     view! {
         <div class="h-full w-full flex items-center justify-center">
-            <div class="flex flex-col w-full md:w-1/2 xl:w-1/3 center place-content-center align-content-center">
+            <div class="flex flex-col w-full md:w-2/3 xl:w-1/2 center place-content-center align-content-center">
                 <div class="w-full">
                     <Transition fallback=move || view! { <p>"Loading..."</p> }>
                         <Winners/>
