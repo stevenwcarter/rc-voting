@@ -82,10 +82,10 @@ pub fn Item(item: Item) -> impl IntoView {
     view! {
         <div class="flex text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white">
             <div class="flex flex-col w-full">
-                <div class="">{item().title}</div>
+                <div class="text-2xl">{item().title}</div>
                 <div class="">{item().body}</div>
             </div>
-            <div class="col-span-4 flex flex-col">
+            <div class="col-span-4 flex flex-col space-around">
                 <button
                     class="align-middle text-3xl"
                     on:click=toggle_done_handler
