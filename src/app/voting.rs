@@ -273,9 +273,11 @@ pub fn VotingInterface() -> impl IntoView {
     provide_context(SaveBallotAction(save_ballot_action));
 
     let ballot = create_resource(save_ballot_action.version(), move |_| get_ballot(election_uuid().clone()));
-    let winners = create_resource(save_ballot_action.version(), move |_| run_elections(election_uuid().clone()));
     let ballot_exists = move || ballot.get().is_some();
+
+    let winners = create_resource(save_ballot_action.version(), move |_| run_elections(election_uuid().clone()));
     provide_context(WinnersContext(winners));
+
 
     view! {
         <div class="h-full w-full flex items-center justify-center">
