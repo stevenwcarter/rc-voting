@@ -16,7 +16,7 @@ pub fn ItemList(election_uuid: String) -> impl IntoView {
     let add_item = create_server_action::<AddItem>();
     let delete_item_action = create_server_action::<DeleteItem>();
     let update_item_action = create_server_action::<UpdateItem>();
-    logging::log!("Provider is configured");
+
     provide_context(DeleteItemContext(delete_item_action));
     provide_context(UpdateItemContext(update_item_action));
 
@@ -67,11 +67,18 @@ pub fn ItemList(election_uuid: String) -> impl IntoView {
 #[component]
 pub fn Item(item: Item) -> impl IntoView {
     let item = Signal::derive(move || item.clone());
+
+    let (is_editing, set_is_editing) = create_signal(false);
+    let (title, set_title) = create_signal(item().title);
+    let (body, set_body) = create_signal(item().body);
+
     let delete_action = use_context::<DeleteItemContext>().unwrap().0;
     let update_action = use_context::<UpdateItemContext>().unwrap().0;
+
     let delete_handler = move |_| {
         delete_action.dispatch(item().into());
     };
+
     let toggle_done_handler = move |_| {
         let mut new_item = item().clone();
         new_item.done = !new_item.done;
@@ -79,13 +86,59 @@ pub fn Item(item: Item) -> impl IntoView {
         update_action.dispatch(new_item.into());
     };
 
+    let edit_submit_handler = move |_| {
+        let new_item = Item {
+            title: title(),
+            body: body(),
+            ..item()
+        };
+        update_action.dispatch(new_item.into());
+        set_is_editing(false);
+    };
+
     view! {
         <div class="flex text-left border border-blue-500 border-solid p-3 m-3 rounded-lg shadow-xl bg-white">
-            <div class="flex flex-col w-full">
-                <div class="text-2xl">{item().title}</div>
-                <div class="">{item().body}</div>
+
+            <div class="flex flex-col space-around m-3">
+                <button
+                    class="text-2xl text-blue-600"
+                    on:click=move |_| { set_is_editing.update(|editing| *editing = !*editing) }
+                >
+                    <Icon icon=i::BsPencilSquare/>
+                </button>
             </div>
-            <div class="col-span-4 flex flex-col space-around">
+            <div class="flex flex-col w-full px-4">
+                <Show
+                    when=is_editing
+                    fallback=move || {
+                        view! {
+                            <div class="text-2xl">{item().title}</div>
+                            <div class="">{item().body}</div>
+                        }
+                    }
+                >
+
+                    <input
+                        type="text"
+                        name="title"
+                        prop:value=title
+                        on:input=move |e| set_title(event_target_value(&e))
+                    />
+                    <textarea
+                        name="body"
+                        prop:value=body
+                        on:input=move |e| set_body(event_target_value(&e))
+                    ></textarea>
+                    <button
+                        class="border border-solid bg-blue-500 text-white text-xl"
+                        on:click=edit_submit_handler
+                    >
+                        "Update"
+                    </button>
+                    "Editing"
+                </Show>
+            </div>
+            <div class="flex flex-col space-around gap-y-8 m-4">
                 <button
                     class="align-middle text-3xl"
                     on:click=toggle_done_handler
@@ -122,8 +175,6 @@ pub fn Item(item: Item) -> impl IntoView {
 
 #[component]
 fn ItemForm(add_item: Action<AddItem, Result<Item, ServerFnError>>, election_uuid: String) -> impl IntoView {
-    // let add_item = create_server_action::<AddItem>();
-    // TODO - grab from query parameters
     let (title, set_title) = create_signal("".to_string());
     let (body, set_body) = create_signal("".to_string());
 
@@ -136,10 +187,7 @@ fn ItemForm(add_item: Action<AddItem, Result<Item, ServerFnError>>, election_uui
             }
         });
     });
-    // if value.get().is_some() {
-    //     set_title("".to_string());
-    //     set_body("".to_string());
-    // }
+
     let _has_error = move || value.with(|val| matches!(val, Some(Err(_))));
 
     view! {
@@ -212,6 +260,7 @@ pub async fn add_item(election_uuid: String, title: String, body: String) -> Res
         ServerFnError::ServerError(format!("Could not extract method and query... {:?}", err))
     })
 }
+
 #[server]
 pub async fn update_item(item: Item) -> Result<(), ServerFnError> {
     use leptos_axum::extract;
