@@ -40,7 +40,7 @@ tokio-stream = { version = "0.1.14", default-features = false, optional = true }
 tower = { version = "0.4", optional = true }
 tower-http = { version = "0.5", features = ["fs", "compression-gzip", "compression-zstd", "compression-deflate", "full"], optional = true }
 tracing-subscriber = { version = "0.3.18", optional = true }
-wasm-bindgen = "=0.2.89"
+wasm-bindgen = "0.2.89"
 ring = { version = "0.17", default-features = false, optional = true}
 thiserror = "1"
 itertools = { version = "0.12", optional = true}
