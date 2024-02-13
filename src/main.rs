@@ -9,6 +9,7 @@
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
+    dotenvy::dotenv().ok();
 
 use rc_voting_leptos::context::GraphQLContext;
     use axum::Router;
