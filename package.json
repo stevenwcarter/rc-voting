@@ -1,37 +1,36 @@
 {
-  "name": "rc-voting",
-  "version": "0.6.0",
-  "description": "Fork from jonhoo/vote.rs to use for ranked choice voting",
-  "scripts": {
-    "test": "exit 0",
-    "release": "standard-version",
-    "release:minor": "standard-version --release-as minor",
-    "release:patch": "standard-version --release-as patch",
-    "release:major": "standard-version --release-as major",
-    "prepare": "husky install"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/stevenwcarter/rc-voting.git"
-  },
-  "keywords": [
-    "leptos",
-    "ranked-choice",
-    "voting",
-    "tailwind"
-  ],
-  "author": "Steven W. Carter <steve@carterfam.us>",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/stevenwcarter/rc-voting/issues"
-  },
-  "homepage": "https://github.com/stevenwcarter/rc-voting#readme",
-  "devDependencies": {
-    "husky": "^8.0.0",
-    "standard-version": "^9.5.0"
-  },
-  "dependencies": {
-    "@commitlint/cli": "^18.6.0",
-    "@commitlint/config-conventional": "^18.6.0"
-  }
+    "name": "rc-voting",
+    "version": "0.6.0",
+    "description": "Fork from jonhoo/vote.rs to use for ranked choice voting",
+    "scripts": {
+        "release": "standard-version",
+        "release:minor": "standard-version --release-as minor",
+        "release:patch": "standard-version --release-as patch",
+        "release:major": "standard-version --release-as major",
+        "prepare": "husky install"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/stevenwcarter/rc-voting.git"
+    },
+    "keywords": [
+        "leptos",
+        "ranked-choice",
+        "voting",
+        "tailwind"
+    ],
+    "author": "Steven W. Carter <steve@carterfam.us>",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/stevenwcarter/rc-voting/issues"
+    },
+    "homepage": "https://github.com/stevenwcarter/rc-voting#readme",
+    "devDependencies": {
+        "husky": "^8.0.0",
+        "standard-version": "^9.5.0"
+    },
+    "dependencies": {
+        "@commitlint/cli": "^18.6.0",
+        "@commitlint/config-conventional": "^18.6.0"
+    }
 }
