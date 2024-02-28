@@ -27,7 +27,11 @@ pub fn LoginPage() -> impl IntoView {
         <div class="bg-gray-100 flex justify-center items-center h-screen">
             // Left: image
             <div class="w-1/2 h-screen hidden lg:block">
-                <img src="/ballot-box.jpg" alt="voting image" class="object-cover w-full h-full"/>
+                <img
+                    src="/ballot-box.jpg"
+                    alt="voting image"
+                    class="object-cover w-full h-full dark:bg-gray-900 dark:bg-blend-screen"
+                />
             </div>
             // Right: login form
             <div class="lg:p-36 md:p-52 sm:20 p-8 w-full lg:w-1/2">

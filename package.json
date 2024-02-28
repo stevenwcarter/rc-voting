@@ -3,7 +3,6 @@
   "version": "0.6.0",
   "description": "Fork from jonhoo/vote.rs to use for ranked choice voting",
   "scripts": {
-    "test": "exit 0",
     "release": "standard-version",
     "release:minor": "standard-version --release-as minor",
     "release:patch": "standard-version --release-as patch",
