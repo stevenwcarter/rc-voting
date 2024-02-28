@@ -3,7 +3,6 @@ use super::items::ItemList;
 use crate::app::login::{LoginForm, SignupForm};
 use crate::models::{Ballot, Election, Item, Vote};
 use icondata as i;
-use leptos::IntoView;
 use leptos::*;
 use leptos_icons::*;
 use leptos_router::*;
