@@ -1,6 +1,6 @@
 {
   "name": "rc-voting",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Fork from jonhoo/vote.rs to use for ranked choice voting",
   "scripts": {
     "release": "standard-version",
