@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.6.1](https://github.com/stevenwcarter/rc-voting/compare/v0.6.0...v0.6.1) (2024-02-29)
+
+
+### Features
+
+* adding .rust-analyzer.json for overrides ([db9e8bb](https://github.com/stevenwcarter/rc-voting/commits/db9e8bb9d0d02beb600e5c76e16cee09c45f05b3))
+* enabling dark mode and beginning styling on elections page ([8e88d56](https://github.com/stevenwcarter/rc-voting/commits/8e88d5608e2044ef148a44816ae7b86e3db1f361))
+* setting RUST_LOG in .env ([783f9ae](https://github.com/stevenwcarter/rc-voting/commits/783f9aea1c6e35611125adccf30c8018c44445ed))
+
+
+### Bug Fixes
+
+* end-to-end tests adjusted to pass ([afac18d](https://github.com/stevenwcarter/rc-voting/commits/afac18d348bc70cd1aed60a0e2b514ed91bb7214))
+* updating leptos for transition fix ([429c978](https://github.com/stevenwcarter/rc-voting/commits/429c978d41b134f585501b5cbf3ca525a8ef0530))
+
 ### [0.6.2](https://github.com/stevenwcarter/rc-voting/compare/v0.6.1...v0.6.2) (2024-02-28)
 
 ### [0.6.1](https://github.com/stevenwcarter/rc-voting/compare/v0.6.0...v0.6.1) (2024-02-28)
